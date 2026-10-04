@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: clip;
+}
+
+body {
+  font-family: var(--font-inter), 'Inter', sans-serif;
+  background: #fff;
+  color: #000;
+  overflow-x: clip;
+}
+
+/* Mobile nav toggle */
+@media (max-width: 768px) {
+  .hidden-mobile {
+    display: none !important;
+  }
+  .show-mobile {
+    display: block !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .show-mobile {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer components {
+  /* Anton szekciócím — a színt szándékosan NEM állítjuk, hogy a text-white/text-* utility felülírhassa sötét szekciókban */
+  .section-title {
+    font-family: var(--font-anton), 'Anton', sans-serif;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    line-height: 0.95;
+  }
+
+  /* Jelentkezés form beviteli mező */
+  .md-input {
+    width: 100%;
+    padding: 0.7rem 0.95rem;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 0.6rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    color: #0D0D0D;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .md-input::placeholder { color: #9ca3af; }
+  .md-input:focus {
+    border-color: #40CFD5;
+    box-shadow: 0 0 0 3px rgba(64, 207, 213, 0.22);
+  }
+}
