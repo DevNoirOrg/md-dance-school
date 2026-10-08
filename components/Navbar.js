@@ -3,13 +3,14 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 
 const navLinks = [
   { label: "Kezdőlap", href: "#hero" },
   { label: "Tánctábor", href: "#tancabor" },
   { label: "Órarend", href: "#orarend" },
   { label: "Szolgáltatások", href: "#szolgaltatasok" },
-  { label: "Studió bérlés", href: "#studio" },
+  { label: "Stúdió bérlés", href: "/studio-berles" },
   { label: "Elérhetőség", href: "#elerhetoseg" },
 ];
 
@@ -18,9 +19,16 @@ const NAV_OFFSET = 104;
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeHref, setActiveHref] = useState(navLinks[0].href);
+  const pathname = usePathname();
 
   useEffect(() => {
+    if (pathname !== "/") {
+      setActiveHref(pathname === "/studio-berles" ? "/studio-berles" : "");
+      return;
+    }
+
     const sections = navLinks
+      .filter((link) => link.href.startsWith("#"))
       .map((link) => document.querySelector(link.href))
       .filter(Boolean);
 
@@ -38,10 +46,21 @@ export default function Navbar() {
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  }, [pathname]);
 
   const handleNavClick = (e, href) => {
+    if (href.startsWith("/")) {
+      setMobileOpen(false);
+      return;
+    }
+
     e.preventDefault();
+    if (pathname !== "/") {
+      window.location.assign(`/${href}`);
+      setMobileOpen(false);
+      return;
+    }
+
     const target = document.querySelector(href);
     if (target) {
       const top = target.getBoundingClientRect().top + window.scrollY - NAV_OFFSET;
@@ -101,7 +120,7 @@ export default function Navbar() {
         >
           {/* Logo - balra igazítva, a középre igazított menün kívül */}
           <a
-            href="#hero"
+            href={pathname === "/" ? "#hero" : "/#hero"}
             style={{
               textDecoration: "none",
               flexShrink: 0,
@@ -134,10 +153,14 @@ export default function Navbar() {
           >
             {navLinks.map((link) => {
               const isActive = activeHref === link.href;
+              const href =
+                pathname !== "/" && link.href.startsWith("#")
+                  ? `/${link.href}`
+                  : link.href;
               return (
                 <a
                   key={link.href}
-                  href={link.href}
+                  href={href}
                   onClick={(e) => handleNavClick(e, link.href)}
                   style={{
                     fontFamily: "var(--font-inter), Inter, sans-serif",
@@ -202,10 +225,14 @@ export default function Navbar() {
           >
             {navLinks.map((link, i) => {
               const isActive = activeHref === link.href;
+              const href =
+                pathname !== "/" && link.href.startsWith("#")
+                  ? `/${link.href}`
+                  : link.href;
               return (
                 <motion.a
                   key={link.href}
-                  href={link.href}
+                  href={href}
                   initial={{ x: -16, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
                   transition={{ delay: i * 0.04 }}
