@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   CalendarDays,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Clock3,
   X,
   UserRound,
@@ -14,6 +16,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { rooms, roomPrices, emailPattern } from "@/lib/studio-booking";
 
 const lessonTypes = [
   {
@@ -39,65 +42,11 @@ const lessonTypes = [
   },
 ];
 
-const rooms = [
-  "Astoria - Nagy Terem",
-  "Astoria - Kis Terem",
-  "Opera - Nagy Terem",
-  "Opera - Kis Terem",
-];
-
-const roomPrices = {
-  "Astoria - Nagy Terem": 1000,
-  "Astoria - Kis Terem": 2000,
-  "Opera - Nagy Terem": 3000,
-  "Opera - Kis Terem": 4000,
-};
-
 const huCurrency = new Intl.NumberFormat("hu-HU", {
   style: "currency",
   currency: "HUF",
   maximumFractionDigits: 0,
 });
-
-// Hetente ismétlődő demó foglaltság: 0 = vasárnap, az értékek foglalt kezdőórák.
-const roomAvailability = {
-  "Astoria - Nagy Terem": {
-    0: [9, 10, 17, 18],
-    1: [10, 11, 18],
-    2: [9, 15, 16, 19],
-    3: [11, 12, 17, 18],
-    4: [9, 10, 16, 17],
-    5: [12, 13, 18],
-    6: [10, 11, 15, 16],
-  },
-  "Astoria - Kis Terem": {
-    0: [10, 11, 16],
-    1: [9, 16, 17],
-    2: [12, 13, 18],
-    3: [9, 10, 15],
-    4: [11, 12, 18],
-    5: [10, 17, 18],
-    6: [9, 14, 15],
-  },
-  "Opera - Nagy Terem": {
-    0: [12, 13, 18],
-    1: [9, 10, 15],
-    2: [10, 11, 17],
-    3: [13, 14, 18],
-    4: [9, 15, 16],
-    5: [11, 12, 16],
-    6: [12, 13, 17],
-  },
-  "Opera - Kis Terem": {
-    0: [9, 15, 16, 19],
-    1: [12, 13, 17],
-    2: [9, 10, 16],
-    3: [10, 11, 15, 16],
-    4: [12, 13, 17],
-    5: [9, 10, 15],
-    6: [11, 12, 18],
-  },
-};
 
 // Egyórás idősávok 08:00 és 22:00 között; az utolsó sáv 21:00-kor kezdődik.
 const hours = Array.from({ length: 14 }, (_, index) => index + 8);
@@ -138,10 +87,6 @@ function getWeekStart(date) {
   return addDays(startOfDay(date), weekday === 0 ? -6 : 1 - weekday);
 }
 
-function getBusyHours(room, date) {
-  return roomAvailability[room][date.getDay()];
-}
-
 function isPastSlot(date, hour, now = new Date()) {
   const slotStart = new Date(date);
   slotStart.setHours(hour, 0, 0, 0);
@@ -149,12 +94,11 @@ function isPastSlot(date, hour, now = new Date()) {
 }
 
 // A havi összesítésből a foglalt, elmúlt és jóváhagyásra váró sávok is kimaradnak.
-function getAvailableHourCount(room, date, now, pendingSlots) {
+function getAvailableHourCount(room, date, now, pendingSlots, approvedSlots) {
   return hours.filter(
     (hour) =>
-      !getBusyHours(room, date).includes(hour) &&
       !isPastSlot(date, hour, now) &&
-      !pendingSlots.some(
+      ![...pendingSlots, ...approvedSlots].some(
         (slot) =>
           slot.room === room &&
           slot.date === dateKey(date) &&
@@ -181,11 +125,15 @@ function TimeSlot({
   hour,
   selected,
   pendingSlots,
+  approvedSlots,
+  availabilityReady,
   onSelect,
   now,
   showHour = false,
 }) {
-  const busy = getBusyHours(room, date).includes(hour);
+  const inProgress = approvedSlots.some(
+    (slot) => slot.room === room && slot.date === dateKey(date) && slot.hour === hour,
+  );
   const past = isPastSlot(date, hour, now);
   const pending = pendingSlots.some(
     (slot) =>
@@ -194,7 +142,7 @@ function TimeSlot({
       slot.hour === hour,
   );
   // A függőben lévő igény is tiltja az új kijelölést, de külön színt kap.
-  const unavailable = busy || past || pending;
+  const unavailable = past || pending || inProgress || !availabilityReady;
   const label = `${room}, ${huDate.format(date)}, ${formatHour(hour)}`;
 
   return (
@@ -202,8 +150,10 @@ function TimeSlot({
       type="button"
       disabled={unavailable}
       aria-label={
-        busy
-          ? `${label} – foglalt`
+        !availabilityReady
+          ? `${label} – foglaltság betöltése`
+          : inProgress
+            ? `${label} – foglalás alatt`
           : pending
             ? `${label} – foglalási igény, jóváhagyásra vár`
             : past
@@ -212,15 +162,10 @@ function TimeSlot({
       }
       aria-pressed={selected}
       onClick={() => onSelect({ room, date: dateKey(date), hour })}
-      onDragOver={(event) => {
-        if (!unavailable) event.preventDefault();
-      }}
-      onDrop={(event) => {
-        event.preventDefault();
-        if (!unavailable) onSelect({ room, date: dateKey(date), hour });
-      }}
       className={`flex h-10 w-full items-center justify-center rounded-lg border text-xs font-semibold transition-colors ${
-        pending
+        inProgress
+          ? "cursor-not-allowed border-blue-400 bg-blue-100 text-blue-900"
+          : pending
           ? "cursor-not-allowed border-amber-300 bg-amber-100 text-amber-900"
           : unavailable
             ? "cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400"
@@ -229,32 +174,7 @@ function TimeSlot({
             : "border-gray-200 bg-white text-gray-600 hover:border-[#40CFD5] hover:bg-[#40CFD5]/10"
       }`}
     >
-      {showHour ? (
-        <>
-          <span>{formatHour(hour)}</span>
-          <span>
-            {busy
-              ? "Foglalt"
-              : pending
-                ? "Jóváhagyásra vár"
-                : past
-                  ? "Elmúlt"
-                  : selected
-                    ? <Check size={16} />
-                    : "Szabad"}
-          </span>
-        </>
-      ) : busy ? (
-        "Foglalt"
-      ) : pending ? (
-        "Jóváhagyásra vár"
-      ) : past ? (
-        "Elmúlt"
-      ) : selected ? (
-        <Check size={16} />
-      ) : (
-        "Szabad"
-      )}
+      {showHour && <span>{formatHour(hour)}</span>}
     </button>
   );
 }
@@ -264,6 +184,8 @@ function RoomDayColumn({
   date,
   selectedSlots,
   pendingSlots,
+  approvedSlots,
+  availabilityReady,
   onSelect,
   now,
 }) {
@@ -271,11 +193,8 @@ function RoomDayColumn({
     <div className="min-w-[150px] flex-1">
       <div className="space-y-2 rounded-xl border border-gray-200 bg-white p-2">
         {hours.map((hour) => (
-          <div key={hour} className="flex items-center gap-2">
-            <span className="w-11 shrink-0 text-xs font-semibold text-gray-500">
-              {formatHour(hour)}
-            </span>
             <TimeSlot
+              key={hour}
               room={room}
               date={date}
               hour={hour}
@@ -288,21 +207,28 @@ function RoomDayColumn({
                 )
               }
               pendingSlots={pendingSlots}
+              approvedSlots={approvedSlots}
+              availabilityReady={availabilityReady}
               onSelect={onSelect}
               now={now}
+              showHour
             />
-          </div>
         ))}
       </div>
     </div>
   );
 }
 
-function BookingDialog({ onClose, totalPrice }) {
+function BookingDialog({ onClose, slots, lessonType }) {
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const sendingRef = useRef(false);
+  const totalPrice = slots.reduce((total, slot) => total + roomPrices[slot.room], 0);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    if (sendingRef.current || submitted) return;
     const form = event.currentTarget;
     const nameInput = form.elements.namedItem("name");
     const emailInput = form.elements.namedItem("email");
@@ -329,23 +255,52 @@ function BookingDialog({ onClose, totalPrice }) {
     );
 
     if (!form.reportValidity()) return;
-    // Demó sikerállapot: itt még nincs szerveroldali mentés vagy e-mail-küldés.
-    setSubmitted(true);
+    sendingRef.current = true;
+    setSending(true);
+    setSubmitError("");
+    try {
+      const response = await fetch("/api/studio-bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lessonType,
+          slots,
+          customer: {
+            name: nameInput.value.trim(),
+            email: emailInput.value,
+            phone: phoneInput.value,
+          },
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || result.success !== true) {
+        setSubmitError(result.error || "Nem sikerült elküldeni a foglalási igényt.");
+        return;
+      }
+      // Csak a Resend által elfogadott e-mail után jelenik meg a sikerüzenet.
+      setSubmitted(true);
+    } catch (error) {
+      console.error("Booking submission failed.", { name: error.name });
+      setSubmitError("A küldés eredménye nem ellenőrizhető. Újraküldés előtt egyeztess a stúdióval, hogy elkerüld a dupla igényt.");
+    } finally {
+      sendingRef.current = false;
+      setSending(false);
+    }
   };
 
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if (event.key === "Escape") onClose(submitted);
+      if (event.key === "Escape" && !sendingRef.current) onClose(submitted);
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [onClose, submitted]);
 
   return (
     <div
       className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-black/65 px-4 py-8 backdrop-blur-sm"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose(submitted);
+        if (event.target === event.currentTarget && !sendingRef.current) onClose(submitted);
       }}
     >
       <section
@@ -357,6 +312,7 @@ function BookingDialog({ onClose, totalPrice }) {
       >
         <button
           type="button"
+          disabled={sending}
           onClick={() => onClose(submitted)}
           aria-label="Foglalási ablak bezárása"
           className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-gray-100 hover:text-black"
@@ -379,9 +335,17 @@ function BookingDialog({ onClose, totalPrice }) {
               id="booking-dialog-description"
               className="mt-3 text-sm leading-relaxed text-gray-600"
             >
-              Az adatok ellenőrzése sikeres. A demófelületen az időpontot
-              jóváhagyásra váró igényként jelöltük, de a kérelmet nem küldtük
-              el valódi foglalási rendszerbe.
+              A foglalási igényről szóló e-mailt elküldtük a stúdiónak.
+              A foglalási igény még nem jelent
+              végleges foglalást.
+            </p>
+            <p className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold leading-relaxed text-amber-900">
+              A foglalásod kizárólag a stúdió e-mailes vagy telefonos
+              megerősítése után válik érvényessé és véglegessé.
+            </p>
+            <p className="mt-3 text-xs leading-relaxed text-gray-500">
+              Az időpontokat jóváhagyásra váró igényként mentettük.
+              A stúdió döntése után a naptár foglaltsága automatikusan frissül.
             </p>
             <button
               type="button"
@@ -407,9 +371,11 @@ function BookingDialog({ onClose, totalPrice }) {
               className="mb-6 mt-2 text-sm leading-relaxed text-gray-600"
             >
               Add meg az elérhetőségeidet a kiválasztott idősávokhoz.
+              {" "}A foglalásod csak a stúdió e-mailes vagy telefonos
+              megerősítése után válik véglegessé.
             </p>
 
-            <form onSubmit={handleSubmit} noValidate className="space-y-4">
+            <form onSubmit={handleSubmit} noValidate aria-busy={sending} className="space-y-4">
               <div>
                 <label htmlFor="booking-name" className="mb-1.5 block text-sm font-semibold text-gray-800">
                   Név
@@ -420,6 +386,8 @@ function BookingDialog({ onClose, totalPrice }) {
                   type="text"
                   autoComplete="name"
                   required
+                  disabled={sending}
+                  maxLength={200}
                   autoFocus
                   onInput={(event) => event.currentTarget.setCustomValidity("")}
                   className="md-input"
@@ -434,8 +402,10 @@ function BookingDialog({ onClose, totalPrice }) {
                   name="email"
                   type="email"
                   autoComplete="email"
-                  pattern="[^@\s]+@(?:[A-Za-z0-9](?:[A-Za-z0-9\-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,}"
+                  pattern={emailPattern}
                   required
+                  disabled={sending}
+                  maxLength={254}
                   onInput={(event) => event.currentTarget.setCustomValidity("")}
                   className="md-input"
                 />
@@ -452,6 +422,8 @@ function BookingDialog({ onClose, totalPrice }) {
                   placeholder="+36 30 123 4567"
                   aria-describedby="booking-phone-hint"
                   required
+                  disabled={sending}
+                  maxLength={40}
                   onInput={(event) => event.currentTarget.setCustomValidity("")}
                   className="md-input"
                 />
@@ -465,14 +437,21 @@ function BookingDialog({ onClose, totalPrice }) {
                   {huCurrency.format(totalPrice)}
                 </span>
               </div>
+              {submitError && (
+                <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+                  {submitError}
+                </p>
+              )}
               <button
                 type="submit"
-                className="w-full rounded-xl bg-[#40CFD5] px-5 py-3.5 font-extrabold text-black transition-colors hover:bg-black hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#40CFD5]/40"
+                disabled={sending}
+                className="w-full rounded-xl bg-[#40CFD5] px-5 py-3.5 font-extrabold text-black transition-colors hover:bg-black hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#40CFD5]/40 disabled:cursor-wait disabled:opacity-60"
               >
-                Tovább
+                {sending ? "Küldés folyamatban…" : "Foglalási igény elküldése"}
               </button>
               <p className="text-center text-xs text-gray-500">
-                Demó űrlap – a megadott adatokat a rendszer nem küldi el és nem menti.
+                A megadott adatokat és időpontokat e-mailben továbbítjuk a
+                stúdiónak a foglalási igény feldolgozásához.
               </p>
             </form>
           </>
@@ -514,10 +493,74 @@ function StudioCalendar({ lessonType }) {
   );
   const [activeRoom, setActiveRoom] = useState(availableRooms[0]);
   const [selectedSlots, setSelectedSlots] = useState([]);
-  // A függő igények csak helyi állapotban élnek, újratöltéskor elvesznek.
-  const [pendingSlots, setPendingSlots] = useState([]);
+  const [drawerExpanded, setDrawerExpanded] = useState(true);
+  const hasSelectedSlots = selectedSlots.length > 0;
+  const hasMultipleSlots = selectedSlots.length > 1;
+  const [storedSlots, setStoredSlots] = useState([]);
+  const pendingSlots = storedSlots.filter((slot) => slot.status === "pending");
+  const approvedSlots = storedSlots.filter((slot) => slot.status === "approved");
+  const [availabilityError, setAvailabilityError] = useState("");
+  const [loadedRange, setLoadedRange] = useState("");
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const rangeDays = getMonthDays(selectedDate);
+  const rangeFrom = dateKey(rangeDays[0]);
+  const rangeTo = dateKey(rangeDays[41]);
+  const rangeKey = `${rangeFrom}/${rangeTo}`;
+  const availabilityReady = loadedRange === rangeKey && !availabilityError;
   const [currentTime, setCurrentTime] = useState(() => new Date());
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [bookingSlots, setBookingSlots] = useState([]);
+
+  // A szerver a közös adatbázisból adja vissza az állapotokat; fókuszkor is frissítünk.
+  useEffect(() => {
+    let active = true;
+    let inFlight = false;
+    const controller = new AbortController();
+    const refresh = async () => {
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        const response = await fetch(`/api/studio-bookings?from=${rangeFrom}&to=${rangeTo}`, {
+          cache: "no-store", signal: controller.signal,
+        });
+        const result = await response.json();
+        if (!response.ok || !Array.isArray(result.slots)) {
+          throw new Error(result.error || "A foglaltság nem tölthető be.");
+        }
+        if (!active) return;
+        setStoredSlots((current) => [
+          ...current.filter((slot) => slot.date < rangeFrom || slot.date > rangeTo),
+          ...result.slots,
+        ]);
+        setSelectedSlots((current) => current.filter((slot) =>
+          !result.slots.some((saved) =>
+            saved.room === slot.room && saved.date === slot.date && saved.hour === slot.hour),
+        ));
+        setAvailabilityError("");
+        setLoadedRange(rangeKey);
+      } catch (error) {
+        if (!active) return;
+        console.error("Calendar availability refresh failed.", { name: error.name });
+        setAvailabilityError(error.message || "A foglaltság nem tölthető be.");
+      } finally {
+        inFlight = false;
+      }
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 10_000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      active = false;
+      controller.abort();
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [rangeFrom, rangeTo, rangeKey, refreshVersion]);
+
+  // Több kijelölésnél alapból csukott; további sávoknál megőrzi a kézi nyitást.
+  useEffect(() => {
+    setDrawerExpanded(!hasMultipleSlots);
+  }, [hasMultipleSlots, hasSelectedSlots]);
 
   useEffect(() => {
     // Félpercenként frissítjük az időt, és töröljük a közben lejárt kijelöléseket.
@@ -553,9 +596,9 @@ function StudioCalendar({ lessonType }) {
   const selectSlot = (slot) => {
     const slotDate = new Date(`${slot.date}T00:00:00`);
     if (
+      !availabilityReady ||
       isPastSlot(slotDate, slot.hour) ||
-      getBusyHours(slot.room, slotDate).includes(slot.hour) ||
-      pendingSlots.some(
+      storedSlots.some(
         (pending) =>
           pending.room === slot.room &&
           pending.date === slot.date &&
@@ -596,10 +639,10 @@ function StudioCalendar({ lessonType }) {
   // Sikeres űrlap után, az ablak bezárásakor kerülnek az időpontok függő állapotba.
   const closeBookingDialog = (submitted) => {
     if (submitted) {
-      setPendingSlots((current) => [...current, ...selectedSlots]);
       setSelectedSlots([]);
     }
     setBookingDialogOpen(false);
+    setRefreshVersion((current) => current + 1);
   };
   const visibleWeekDays = Array.from({ length: 7 }, (_, index) =>
     addDays(getWeekStart(selectedDate), index),
@@ -622,6 +665,15 @@ function StudioCalendar({ lessonType }) {
       }`}
       aria-label="Teremfoglaltsági naptár"
     >
+      {availabilityError ? (
+        <div role="alert" className="mb-5 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+          {availabilityError} A foglaltság ellenőrzéséig nem választható új időpont.
+          <button type="button" onClick={() => setRefreshVersion((current) => current + 1)}
+            className="ml-2 underline">Újrapróbálás</button>
+        </div>
+      ) : !availabilityReady && (
+        <p role="status" className="mb-5 text-sm text-gray-600">Foglaltság betöltése…</p>
+      )}
       <div className="mb-5 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h2 className="section-title text-3xl text-black sm:text-4xl">
@@ -735,7 +787,11 @@ function StudioCalendar({ lessonType }) {
         aria-labelledby={`room-tab-${rooms.indexOf(activeRoom)}`}
         className="rounded-2xl border border-gray-200 bg-[#f7f7f7] p-3 sm:p-4"
       >
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className={`mb-4 flex gap-2 ${
+          view === "day"
+            ? "flex-col items-center text-center"
+            : "flex-wrap items-center justify-between"
+        }`}>
           <h3 className="text-lg font-extrabold text-black">{activeRoom}</h3>
           <span className="rounded-full bg-[#40CFD5]/20 px-3 py-1 text-xs font-bold text-[#087c81]">
             {view === "day" ? "Napi foglaltság" : view === "week" ? "Heti foglaltság" : "Havi foglaltság"}
@@ -743,12 +799,14 @@ function StudioCalendar({ lessonType }) {
         </div>
 
       {view === "day" && (
-        <div className="max-w-xl">
+        <div className="mx-auto max-w-xl">
           <RoomDayColumn
             room={activeRoom}
             date={selectedDate}
             selectedSlots={selectedSlots}
             pendingSlots={pendingSlots}
+            approvedSlots={approvedSlots}
+            availabilityReady={availabilityReady}
             onSelect={selectSlot}
             now={currentTime}
           />
@@ -795,6 +853,8 @@ function StudioCalendar({ lessonType }) {
                         )
                       }
                       pendingSlots={pendingSlots}
+                      approvedSlots={approvedSlots}
+                      availabilityReady={availabilityReady}
                       onSelect={selectSlot}
                       now={currentTime}
                       showHour
@@ -819,13 +879,16 @@ function StudioCalendar({ lessonType }) {
           ))}
           {monthDays.map((date) => {
             const inMonth = date.getMonth() === selectedDate.getMonth();
-            const busy = getBusyHours(activeRoom, date).length;
-            const available = getAvailableHourCount(
+            const inProgressCount = approvedSlots.filter(
+              (slot) => slot.room === activeRoom && slot.date === dateKey(date),
+            ).length;
+            const available = availabilityReady ? getAvailableHourCount(
               activeRoom,
               date,
               currentTime,
               pendingSlots,
-            );
+              approvedSlots,
+            ) : 0;
             const pendingCount = pendingSlots.filter(
               (slot) =>
                 slot.room === activeRoom && slot.date === dateKey(date),
@@ -852,7 +915,7 @@ function StudioCalendar({ lessonType }) {
                 {inMonth && (
                   <>
                     <span className="mt-1 hidden text-[10px] text-gray-500 sm:block">
-                      {available} szabad
+                      {availabilityReady ? `${available} szabad` : "Betöltés…"}
                     </span>
                     <span className="mt-1 flex gap-1" aria-hidden="true">
                       {available > 0 && (
@@ -861,8 +924,8 @@ function StudioCalendar({ lessonType }) {
                       {pendingCount > 0 && (
                         <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                       )}
-                      {busy > 0 && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-gray-400" />
+                      {inProgressCount > 0 && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
                       )}
                     </span>
                   </>
@@ -876,20 +939,11 @@ function StudioCalendar({ lessonType }) {
 
       <div className="mt-5 flex flex-col gap-4 rounded-2xl border border-gray-200 bg-[#f7f7f7] p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <span
-            draggable
-            onDragStart={(event) => {
-              event.dataTransfer.setData("text/plain", "booking-request");
-              event.dataTransfer.effectAllowed = "move";
-            }}
-            className="inline-flex cursor-grab items-center gap-2 rounded-xl bg-[#40CFD5] px-4 py-3 text-sm font-extrabold text-black active:cursor-grabbing"
-          >
-            <Clock3 size={18} aria-hidden="true" />
-            Foglalási igény
-          </span>
-          <span className="text-xs leading-relaxed text-gray-600">
-            Húzd a naptár egy szabad idősávjára, vagy válassz egyet kattintással.
-          </span>
+          <Clock3 size={18} aria-hidden="true" className="shrink-0 text-[#087c81]" />
+          <p className="text-sm leading-relaxed text-gray-600">
+            Foglalási igényének leadásához kattintson egy szabad idősávra.
+            Több időpontot is kiválaszthat.
+          </p>
         </div>
         <div className="flex flex-wrap gap-4 text-xs font-semibold text-gray-600">
           <span className="flex items-center gap-2">
@@ -898,18 +952,21 @@ function StudioCalendar({ lessonType }) {
           </span>
           <span className="flex items-center gap-2">
             <span className="h-3 w-3 rounded bg-gray-300" />
-            Foglalt
+            Elmúlt időpont
           </span>
           <span className="flex items-center gap-2">
             <span className="h-3 w-3 rounded bg-amber-200 ring-1 ring-amber-400" />
             Igény elküldve, jóváhagyásra vár
           </span>
+          <span className="flex items-center gap-2">
+            <span className="h-3 w-3 rounded bg-blue-100 ring-1 ring-blue-400" />
+            Foglalás alatt
+          </span>
         </div>
       </div>
 
       <p className="mt-4 text-center text-xs text-gray-500">
-        Demó naptár – a megjelenített foglaltság mintaadat, nem valós idejű
-        elérhetőség.
+        A foglalások állapota 10 másodpercenként frissül.
       </p>
     </motion.section>
     {/* A fix összesítő az animált szakaszon kívül marad, így a képernyő aljához rögzül. */}
@@ -921,25 +978,43 @@ function StudioCalendar({ lessonType }) {
         style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
       >
         <div className="mx-auto max-w-7xl px-4 pt-3 sm:px-6 sm:pt-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-[#087c81]">
                 Kiválasztott idősávok ({selectedSlots.length})
               </p>
               <p className="mt-1 text-xs text-gray-600">
-                Demó kijelölés – még nem rögzít valódi foglalást.
+                Kijelölés – még nem végleges foglalás.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setSelectedSlots([])}
-              className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold text-gray-600 transition-colors hover:bg-gray-100 hover:text-black"
-            >
-              Összes törlése
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                aria-expanded={drawerExpanded}
+                aria-controls="selected-booking-slots"
+                onClick={() => setDrawerExpanded((current) => !current)}
+                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold text-[#087c81] transition-colors hover:bg-[#40CFD5]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#40CFD5]"
+              >
+                {drawerExpanded ? "Összecsukás" : "Időpontok megtekintése"}
+                {drawerExpanded ? (
+                  <ChevronDown size={18} aria-hidden="true" />
+                ) : (
+                  <ChevronUp size={18} aria-hidden="true" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedSlots([])}
+                className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold text-gray-600 transition-colors hover:bg-gray-100 hover:text-black"
+              >
+                Összes törlése
+              </button>
+            </div>
           </div>
           {/* Három 64 px-es sor és két 8 px-es térköz után a lista belül görgethető. */}
           <ul
+            id="selected-booking-slots"
+            hidden={!drawerExpanded}
             aria-label="Kiválasztott időpontok"
             tabIndex={0}
             className="max-h-[min(208px,30vh)] space-y-2 overflow-y-auto overscroll-contain rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#40CFD5]"
@@ -981,7 +1056,12 @@ function StudioCalendar({ lessonType }) {
             </div>
             <button
               type="button"
-              onClick={() => setBookingDialogOpen(true)}
+              disabled={!availabilityReady}
+              onClick={() => {
+                // A nyitáskori lista marad az e-mail alapja az időzítő frissítései után is.
+                setBookingSlots([...selectedSlots]);
+                setBookingDialogOpen(true);
+              }}
               className="rounded-xl bg-[#40CFD5] px-5 py-2.5 text-sm font-extrabold text-black transition-colors hover:bg-black hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#40CFD5]/40"
             >
               Foglalás
@@ -993,7 +1073,8 @@ function StudioCalendar({ lessonType }) {
     {bookingDialogOpen && (
       <BookingDialog
         onClose={closeBookingDialog}
-        totalPrice={totalPrice}
+        slots={bookingSlots}
+        lessonType={lessonType}
       />
     )}
     </>
@@ -1108,7 +1189,7 @@ export default function StudioBerlesPage() {
             })}
           </div>
 
-          {/* Óratípusváltáskor a key új naptárat hoz létre, és törli a korábbi helyi állapotot. */}
+          {/* Óratípusváltáskor új naptár indul; a mentett foglaltságot újra betöltjük. */}
           {selectedType && <StudioCalendar key={selectedType} lessonType={selectedType} />}
         </div>
       </section>
