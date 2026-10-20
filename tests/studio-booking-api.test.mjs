@@ -32,6 +32,45 @@ const request = (body) => new Request("http://localhost/api/studio-bookings", {
 });
 const calendarRequest = () => new Request("http://localhost/api/studio-bookings?from=2099-10-01&to=2099-10-31");
 
+test("single SQL script upgrades legacy bookings and can be rerun without data loss", async () => {
+  const db = new PGlite();
+  try {
+    await db.exec(`
+      create role anon; create role authenticated; create role service_role bypassrls;
+      create table studio_requests (
+        id uuid primary key default gen_random_uuid(), customer jsonb not null,
+        lesson_type text not null, token_hash text not null unique, created_at timestamptz default now()
+      );
+      create table studio_slots (
+        id uuid primary key default gen_random_uuid(),
+        request_id uuid not null references studio_requests(id) on delete cascade,
+        room text not null, date date not null, hour integer not null check (hour between 8 and 21),
+        price integer not null, status text not null default 'pending', decided_at timestamptz
+      );
+      insert into studio_requests(customer, lesson_type, token_hash) values ('{}', 'privat', 'legacy');
+      insert into studio_slots(request_id, room, date, hour, price)
+        select id, 'Astoria - Nagy Terem', '2099-10-15', 10, 1000 from studio_requests;
+    `);
+    const schema = await readFile(new URL("../supabase/studio-bookings.sql", import.meta.url), "utf8");
+    await db.exec(schema);
+    assert.equal((await db.query("select duration_minutes from studio_slots")).rows[0].duration_minutes, 60);
+    assert.equal((await db.query("select count(*)::integer as n from studio_slot_units")).rows[0].n, 2);
+    const slot = (await db.query("select id from studio_slots")).rows[0];
+    await db.query("select decide_studio_request('legacy', 'reject', $1)", [slot.id]);
+    assert.equal((await db.query("select count(*)::integer as n from studio_slot_units")).rows[0].n, 0);
+    await db.query("select create_studio_request('{}', 'privat', 'new', $1)", [[{
+      room: "Astoria - Nagy Terem", date: "2099-10-15", hour: 10.5, durationMinutes: 90, price: 1500,
+    }]]);
+    await db.exec(schema);
+    const saved = (await db.query("select hour::float as hour, duration_minutes, price from studio_slots where status='pending'")).rows[0];
+    assert.deepEqual(saved, { hour: 10.5, duration_minutes: 90, price: 1500 });
+    assert.equal((await db.query("select count(*)::integer as n from studio_slots")).rows[0].n, 2);
+    assert.equal((await db.query("select count(*)::integer as n from studio_slot_units")).rows[0].n, 3);
+  } finally {
+    await db.close();
+  }
+});
+
 test("booking API and real PostgreSQL transactions cover decisions, conflicts and failure handling", async (t) => {
   const db = new PGlite();
   await db.exec("create role anon; create role authenticated; create role service_role bypassrls;");
@@ -74,10 +113,10 @@ test("booking API and real PostgreSQL transactions cover decisions, conflicts an
       }
       assert.ok(parsed.pathname.endsWith("/studio_slots"));
       if (failReads) return Response.json({ code: "test_outage" }, { status: 503 });
-      assert.equal(parsed.searchParams.get("select"), "room,date,hour,status");
+      assert.equal(parsed.searchParams.get("select"), "room,date,hour,status,duration_minutes");
       const dates = parsed.searchParams.getAll("date").map((value) => value.slice(4));
       const result = await db.query(
-        "select room, to_char(date, 'YYYY-MM-DD') as date, hour, status from studio_slots where date >= $1 and date <= $2 and status in ('pending', 'approved') order by date, hour, room limit $3 offset $4",
+        "select room, to_char(date, 'YYYY-MM-DD') as date, hour::float as hour, status, duration_minutes from studio_slots where date >= $1 and date <= $2 and status in ('pending', 'approved') order by date, hour, room limit $3 offset $4",
         [dates[0], dates[1], Number(parsed.searchParams.get("limit")), Number(parsed.searchParams.get("offset"))],
       );
       return Response.json(result.rows);
@@ -129,7 +168,7 @@ test("booking API and real PostgreSQL transactions cover decisions, conflicts an
       const available = await (await GET(calendarRequest())).json();
       assert.equal(available.slots.length, 3);
       assert.ok(available.slots.every((slot) => slot.status === "pending"));
-      assert.ok(available.slots.every((slot) => Object.keys(slot).sort().join(",") === "date,hour,room,status"));
+      assert.ok(available.slots.every((slot) => Object.keys(slot).sort().join(",") === "date,durationMinutes,hour,room,status"));
       const stored = (await db.query("select token_hash from studio_requests")).rows[0];
       const rawToken = new URL(payload.text.match(/Jóváhagyás: (\S+)/)[1]).searchParams.get("token");
       assert.equal(stored.token_hash.length, 64);
@@ -162,9 +201,30 @@ test("booking API and real PostgreSQL transactions cover decisions, conflicts an
       const publicSlots = (await (await GET(calendarRequest())).json()).slots;
       assert.equal(publicSlots.length, 2);
       assert.ok(publicSlots.every((slot) => slot.status === "approved"));
-      const rejected = (await db.query("select room, to_char(date, 'YYYY-MM-DD') as date, hour from studio_slots where status='rejected'")).rows[0];
+      const rejected = (await db.query("select room, to_char(date, 'YYYY-MM-DD') as date, hour::float as hour from studio_slots where status='rejected'")).rows[0];
       assert.equal((await POST(request({ ...input(), slots: [rejected] }))).status, 200);
       assert.equal((await db.query("select count(*)::integer as n from studio_slots where status='pending'")).rows[0].n, 1);
+    });
+
+    await t.test("half-hour intervals persist and overlapping starts are rejected atomically", async () => {
+      const booking = { ...input(), slots: [
+        { room: "Opera - Nagy Terem", date: "2099-10-16", hour: 10.5, durationMinutes: 90 },
+      ] };
+      assert.equal((await POST(request(booking))).status, 200);
+      assert.ok(payload.text.includes("10:30–12:00"));
+      const stored = (await db.query("select price, duration_minutes from studio_slots where date='2099-10-16'")).rows[0];
+      assert.equal(stored.price, 4500);
+      assert.equal(stored.duration_minutes, 90);
+      const before = mailCount;
+      for (const slot of [
+        { hour: 10, durationMinutes: 60 }, { hour: 11.5, durationMinutes: 60 },
+        { hour: 9, durationMinutes: 240 },
+      ]) {
+        assert.equal((await POST(request({ ...booking, slots: [{ ...booking.slots[0], ...slot }] }))).status, 409);
+      }
+      assert.equal(mailCount, before);
+      assert.equal((await POST(request({ ...booking, slots: [{ ...booking.slots[0], hour: 12 }] }))).status, 200);
+      assert.equal((await db.query("select count(*)::integer as n from studio_slot_units where date='2099-10-16'")).rows[0].n, 6);
     });
 
     await t.test("explicit send rejection releases slots; uncertain sending retains pending slots", async () => {

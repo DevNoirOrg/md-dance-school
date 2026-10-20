@@ -39,7 +39,9 @@ The database prevents overlapping active requests, even when two users submit si
 ## Supabase setup and email decisions
 
 1. Create a Supabase project.
-2. Run `supabase/studio-bookings.sql` once in its SQL Editor. This creates the tables, unique active-slot index and atomic decision functions.
+2. Run `supabase/studio-bookings.sql` in its SQL Editor, for both new and existing databases.
+   This single script can be rerun safely. It preserves legacy bookings as 60-minute intervals,
+   keeps the duration of newer bookings, and adds atomic overlap protection for every occupied half hour.
 3. Add these server-only settings to `.env.local`:
    - `SUPABASE_URL`: your project's URL.
    - `SUPABASE_SERVICE_ROLE_KEY`: the project's service-role key. Never use this key in client code or commit it.
@@ -62,6 +64,27 @@ in Supabase if no notification arrives.
 Before a public production launch, add abuse protection/rate limiting and define retention for customer data.
 
 Do not run `npm run build` while `next dev` is running: both use `.next`.
+
+## Calendar interval selection
+
+After choosing a lesson type, customers choose from four room cards before the calendar appears.
+Group lessons can select only Astoria - Nagy Terem; the other cards remain visible but disabled.
+Changing rooms preserves selected intervals; changing lesson types starts a new selection.
+Choosing a room scrolls to the current local half-hour row between 08:00 and 22:00,
+or to 08:00 outside opening hours. In monthly view it scrolls to the calendar instead.
+
+Daily and weekly views use a continuous half-hour grid from 08:00 to 22:00.
+Hover previews one hour with a translucent highlight; click selects it.
+Preview and selected blocks have no visible time-range or price labels, keeping the underlying
+calendar times readable. Selected intervals and prices remain in the booking summary.
+Click the selection's upper arrow to start 30 minutes earlier, or its lower arrow to end
+30 minutes later (minimum 60 minutes). The arrows support standard keyboard button activation.
+Dragging does not extend selections. Selected blocks can be clicked to remove them.
+Starts must allow at least a full hour before closing. Stored or selected intervals may not overlap;
+adjacent intervals are allowed. Prices are proportional to duration, including half hours.
+Monthly availability counts valid one-hour starting times, not independent bookable hours.
+The API and notification emails include the complete interval and its calculated price.
+Run the updated SQL script before using the updated app; without it availability fails explicitly.
 
 ## Booking tests
 

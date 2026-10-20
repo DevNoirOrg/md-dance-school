@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { validateBooking, emailPattern } from "../lib/studio-booking.js";
+import { validateBooking, emailPattern, overlaps, formatBookingHour } from "../lib/studio-booking.js";
 import { buildBookingEmail } from "../lib/booking-email.js";
 
 const now = new Date("2026-10-14T10:00:00Z");
@@ -49,7 +49,7 @@ test("rejects invalid dates, past/duplicate slots and capacity mismatch", () => 
   for (const change of [
     { date: "2026-02-30" }, { date: "2026-10-13" },
     { date: "2026-10-14", hour: 12 },
-    { room: "Unknown room" }, { hour: 22 }, { hour: 8.5 }, { date: "0000-00-00" },
+    { room: "Unknown room" }, { hour: 22 }, { hour: 8.25 }, { hour: "10.5" }, { date: "0000-00-00" },
   ]) {
     const input = request();
     Object.assign(input.slots[0], change);
@@ -65,6 +65,28 @@ test("rejects invalid dates, past/duplicate slots and capacity mismatch", () => 
   assert.ok(validateBooking(group, now).booking);
   assert.ok(validateBooking({ ...request(), slots: [] }, now).error);
   assert.ok(validateBooking(null, now).error);
+});
+
+test("half-hour starts and duration pricing respect minimum, closing and overlap", () => {
+  const input = request();
+  input.slots = [{ room: "Astoria - Nagy Terem", date: "2026-10-15", hour: 10.5, durationMinutes: 90 }];
+  const { booking } = validateBooking(input, now);
+  assert.equal(booking.total, 1500);
+  assert.ok(buildBookingEmail(withSlotIds(booking), emailOptions).text.includes("10:30–12:00"));
+  assert.equal(formatBookingHour(21.5), "21:30");
+  for (const change of [
+    { durationMinutes: 30 }, { durationMinutes: 75 }, { durationMinutes: -60 },
+    { hour: 21.5 }, { hour: 21, durationMinutes: 90 },
+  ]) {
+    assert.ok(validateBooking({ ...input, slots: [{ ...input.slots[0], ...change }] }, now).error);
+  }
+  assert.ok(validateBooking({ ...input, slots: [{ ...input.slots[0], hour: 20.5 }] }, now).booking);
+  const adjacent = { ...input.slots[0], hour: 12, durationMinutes: 60 };
+  assert.equal(overlaps(input.slots[0], adjacent), false);
+  assert.ok(validateBooking({ ...input, slots: [input.slots[0], adjacent] }, now).booking);
+  assert.ok(validateBooking({ ...input, slots: [input.slots[0], { ...adjacent, hour: 11.5 }] }, now).error);
+  const today = { ...input.slots[0], date: "2026-10-14", hour: 12.5 };
+  assert.ok(validateBooking({ ...input, slots: [today] }, now).booking);
 });
 
 test("previously demo-occupied slots pass validation for all rooms and hours", () => {

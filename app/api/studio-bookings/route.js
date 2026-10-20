@@ -22,8 +22,10 @@ export async function GET(request) {
     const slots = [];
     // Lapozunk: a Supabase alapértelmezett sorlimitje nem rejthet el foglalásokat.
     for (let offset = 0; ; offset += 500) {
-      const page = await bookingStore(`studio_slots?select=room,date,hour,status&date=gte.${from}&date=lte.${to}&status=in.(pending,approved)&order=date,hour,room&limit=500&offset=${offset}`);
-      slots.push(...page);
+      const page = await bookingStore(`studio_slots?select=room,date,hour,status,duration_minutes&date=gte.${from}&date=lte.${to}&status=in.(pending,approved)&order=date,hour,room&limit=500&offset=${offset}`);
+      slots.push(...page.map(({ duration_minutes, ...slot }) => ({
+        ...slot, durationMinutes: duration_minutes,
+      })));
       if (page.length < 500) break;
     }
     return NextResponse.json({ slots }, { headers: { "Cache-Control": "no-store" } });
