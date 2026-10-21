@@ -2,6 +2,7 @@
 import { motion, useInView } from 'framer-motion'
 import { useRef, useState, useEffect } from 'react'
 import InstaCard from './InstaCard'
+import HalftoneDots from './HalftoneDots'
 
 // A 4 esemény-plakát — ugyanaz az InstaCard, de eltérő méret és képarány.
 const events = [
@@ -11,11 +12,13 @@ const events = [
   { src: '/canva/event-summer-classes.png', alt: "Summer Classes '26", ratio: 1.778, width: 316, rotate: 3, y: 150 },
 ]
 
-// Fekete halftone-pöttyök a sarkokban (fehér háttéren) — kisebbek, sarokba húzva.
+// Animált halftone-pöttyök (ugyanaz, mint a heróban / órarendnél) a sarkokban.
+// Átlóghatnak a szomszéd szekciókba (felfelé a jelentkezésbe, lefelé a láblécbe).
+// Cikk-cakkban: bal felül (felnyúlik a jelentkezésbe) → jobb oldalt középen →
+// a lábléc bal felső foltja (Footer.js) folytatja lent.
 const dots = [
-  { top: '0%', left: '-3%', size: 150, hideOnMobile: false },
-  { top: '-2%', right: '-3%', size: 160, hideOnMobile: true },
-  { bottom: '2%', right: '2%', size: 120, hideOnMobile: true },
+  { top: -90, left: -60, size: 200, hideOnMobile: false },
+  { top: '40%', right: -90, size: 220, hideOnMobile: true },
 ]
 
 function useIsMobile() {
@@ -71,20 +74,19 @@ export default function News() {
   const inView = useInView(titleRef, { once: true, margin: '-80px' })
 
   return (
-    <section id="hirek" className="relative bg-white overflow-x-clip py-16 sm:py-24 px-4">
-      {/* Fekete halftone pöttyök */}
+    <section id="hirek" className="relative z-30 overflow-x-clip py-16 sm:py-24 px-4">
+      {/* Animált halftone pöttyök */}
       {dots.map((d, i) => (
-        <img
+        <HalftoneDots
           key={i}
-          src="/dots-black.png"
-          alt=""
-          aria-hidden="true"
-          className={`pointer-events-none absolute select-none opacity-70 ${d.hideOnMobile ? 'hidden md:block' : ''}`}
-          style={{ top: d.top, left: d.left, right: d.right, bottom: d.bottom, width: d.size }}
+          size={d.size}
+          zIndex={0}
+          className={d.hideOnMobile ? 'hidden md:block' : ''}
+          style={{ top: d.top, left: d.left, right: d.right, bottom: d.bottom }}
         />
       ))}
 
-      <div className="relative max-w-7xl mx-auto md:min-h-[640px]">
+      <div className="relative z-10 max-w-7xl mx-auto md:min-h-[640px]">
         {/* Cím — mobilon felül */}
         {mobile && <Title titleRef={titleRef} inView={inView} className="mb-8" />}
 

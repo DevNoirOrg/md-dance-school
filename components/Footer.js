@@ -3,28 +3,28 @@ import { motion, useInView } from 'framer-motion'
 import { useRef } from 'react'
 import Image from 'next/image'
 import { Instagram, Facebook, Youtube } from 'lucide-react'
+import HalftoneDots from './HalftoneDots'
 
 export default function Footer() {
   const ref = useRef(null)
   const inView = useInView(ref, { once: true, margin: '-60px' })
 
   return (
-    <footer id="elerhetoseg" className="relative bg-white overflow-hidden pt-16 pb-8 px-4">
-      {/* Fekete halftone pöttyök — bal felül */}
-      <img
-        src="/dots-black.png"
-        alt=""
-        aria-hidden="true"
-        className="pointer-events-none absolute select-none opacity-70"
-        style={{ top: -20, left: -20, width: 180 }}
-      />
+    <footer
+      id="elerhetoseg"
+      className="relative z-20 bg-white pt-16 pb-8 px-4"
+      // oldalra levágjuk, felfelé a pöttyök átlóghatnak a Hírek szekcióba
+      style={{ overflowX: 'clip', overflowY: 'visible' }}
+    >
+      {/* Animált halftone pöttyök — bal felül, felfelé átlógva */}
+      <HalftoneDots size={230} zIndex={0} style={{ top: -110, left: -70 }} />
 
       <motion.div
         ref={ref}
         initial={{ opacity: 0, y: 20 }}
         animate={inView ? { opacity: 1, y: 0 } : {}}
         transition={{ duration: 0.7 }}
-        className="relative max-w-3xl mx-auto flex flex-col items-center text-center gap-8"
+        className="relative z-10 max-w-3xl mx-auto flex flex-col items-center text-center gap-8"
       >
         {/* Nagy logó középen */}
         <Image

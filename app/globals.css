@@ -72,3 +72,87 @@ body {
     box-shadow: 0 0 0 3px rgba(64, 207, 213, 0.22);
   }
 }
+
+/* ── Insta-kártya animációk (InstaCard) ─────────────────────────────
+   Minden lassú. A --ig-d-t az InstaCard állítja be úgy, hogy az összes
+   kártya animációja egyszerre (szinkronban) menjen. */
+
+/* Profilkör: lélegzik */
+.ig-avatar {
+  animation: ig-breathe 4.5s ease-in-out infinite;
+  animation-delay: var(--ig-d, 0s);
+}
+@keyframes ig-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.09); }
+}
+
+/* Név-csíkok: kicsit nő → megáll → kicsit csökken → vár.
+   A második csík eltolva indul. */
+.ig-bar {
+  transform-origin: left center;
+  animation: ig-bar 6s ease-in-out infinite;
+  animation-delay: var(--ig-d, 0s);
+}
+.ig-bar-2 { animation-delay: calc(var(--ig-d, 0s) + 1.6s); }
+@keyframes ig-bar {
+  0%        { transform: scaleX(1); }
+  25%, 45%  { transform: scaleX(1.18); } /* nő, majd megáll */
+  70%, 100% { transform: scaleX(1); }    /* csökken, majd vár */
+}
+
+/* Akció-ikonok: sorban felvillannak (szív piros, a többi fekete kitöltéssel),
+   közben egy nagyon picit nagyobbak lesznek. 10 mp-es ciklus, ikononként 2,5 mp eltolás. */
+.ig-icon {
+  transform-box: fill-box;
+  transform-origin: center;
+  fill-opacity: 0;
+  animation: ig-flash 10s ease-in-out infinite;
+}
+.ig-icon-heart { animation-name: ig-flash-heart; }
+.ig-icon-1 { animation-delay: var(--ig-d, 0s); }
+.ig-icon-2 { animation-delay: calc(var(--ig-d, 0s) + 2.5s); }
+.ig-icon-3 { animation-delay: calc(var(--ig-d, 0s) + 5s); }
+.ig-icon-4 { animation-delay: calc(var(--ig-d, 0s) + 7.5s); }
+@keyframes ig-flash {
+  0%, 24%, 100% { fill-opacity: 0; transform: scale(1); }
+  8%, 14%       { fill-opacity: 1; transform: scale(1.1); }
+}
+@keyframes ig-flash-heart {
+  0%, 24%, 100% { fill-opacity: 0; transform: scale(1); color: #111827; }
+  8%, 14%       { fill-opacity: 1; transform: scale(1.1); color: #ef4444; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ig-avatar, .ig-bar, .ig-icon { animation: none !important; }
+}
+
+/* ── Szolgáltatások: MD Dance Company előnézet ──────────────────────
+   A hosszú, teljes oldalas képernyőkép a keret tetejéhez igazodik;
+   ráhúzott egérnél végiggörget az oldal aljáig, elengedve gyorsan visszaáll.
+   Érintőképernyőn (nincs hover) magától, lassan oda-vissza görget. */
+.company-preview-shot {
+  background-size: 100% auto;
+  background-repeat: no-repeat;
+  background-position: center top;
+  /* visszafelé (egér elengedésekor): gyorsan felgördül */
+  transition: background-position 2s cubic-bezier(0.65, 0, 0.35, 1);
+}
+.company-preview:hover .company-preview-shot,
+.company-preview:focus-visible .company-preview-shot {
+  background-position: center bottom;
+  /* ráhúzáskor: azonnal, lendülettel indul, a vége felé lassul */
+  transition: background-position 14s cubic-bezier(0.25, 0.6, 0.4, 1);
+}
+@media (hover: none) {
+  .company-preview-shot {
+    animation: company-scroll 24s ease-in-out infinite alternate;
+  }
+}
+@keyframes company-scroll {
+  0%, 8%    { background-position: center top; }
+  92%, 100% { background-position: center bottom; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .company-preview-shot { transition: none !important; animation: none !important; }
+}

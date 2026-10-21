@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { endHour, formatBookingHour, overlaps } from "@/lib/studio-booking";
 
 const starts = Array.from({ length: 28 }, (_, index) => 8 + index / 2);
@@ -75,10 +75,15 @@ export default function BookingTimeline({
         return (
         <div key={slot.hour} style={styleFor(slot)}
           className="absolute inset-x-0 z-20 border border-[#087c81] bg-[#40CFD5]/25 text-black">
+          {/* A kijelölésre kattintva nem törlődik; törölni csak a sarokban lévő X-szel lehet. */}
+          <div className="flex h-full w-full items-center justify-center px-1 text-[11px] font-extrabold text-[#065f63]">
+            {rangeLabel(slot)}
+          </div>
           <button type="button" onClick={() => onRemove(slot)}
             aria-label={`${room}, ${date}, ${rangeLabel(slot)} kijelölésének törlése`}
-            className="block h-full w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-black"
-          />
+            title="Kijelölés törlése"
+            className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-black text-white shadow-sm transition-colors hover:bg-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-black"
+          ><X size={14} strokeWidth={2.75} aria-hidden="true" /></button>
           <button type="button"
             aria-label={`${room}, ${date}, ${rangeLabel(slot)} kezdése fél órával korábban`}
             title="Kezdés fél órával korábban"

@@ -95,7 +95,7 @@ export async function POST(request) {
     });
     const result = await response.json();
     if (!response.ok) {
-      console.error("Resend rejected booking email.", { status: response.status, code: result.name });
+      console.error("Resend rejected booking email.", { status: response.status, code: result.name, message: result.message });
       // Kifejezett elutasításnál felszabadítjuk a sávokat. Bizonytalan küldésnél nem.
       await bookingStore(`studio_requests?id=eq.${saved.id}`, { method: "DELETE" });
       return NextResponse.json({

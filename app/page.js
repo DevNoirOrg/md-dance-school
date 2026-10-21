@@ -6,6 +6,7 @@ import Teachers from '@/components/Teachers'
 import Jelentkezes from '@/components/Jelentkezes'
 import News from '@/components/News'
 import Footer from '@/components/Footer'
+import { ClassSelectionProvider, SelectionDock } from '@/components/ClassSelection'
 
 export default function Home() {
   return (
@@ -13,9 +14,13 @@ export default function Home() {
       <Navbar />
       <Hero />
       <About />
-      <Orarend />
-      <Teachers />
-      <Jelentkezes />
+      {/* Az órarendben kiválasztott órák a jelentkezési űrlapba kerülnek */}
+      <ClassSelectionProvider>
+        <Orarend />
+        <Teachers />
+        <Jelentkezes />
+        <SelectionDock />
+      </ClassSelectionProvider>
       <News />
       <Footer />
     </main>

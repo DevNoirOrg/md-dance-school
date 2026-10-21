@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import {
   CalendarDays,
@@ -10,14 +11,17 @@ import {
   ChevronRight,
   ChevronUp,
   Clock3,
-  DoorOpen,
   X,
   UserRound,
-  Users,
   UsersRound,
+  MousePointerClick,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import UserRoundGroup from "@/components/icons/UserRoundGroup";
+import Footer from "@/components/Footer";
 import BookingTimeline from "@/components/BookingTimeline";
+import HalftoneDots from "@/components/HalftoneDots";
+import RoomShowcase from "@/components/RoomShowcase";
 import { rooms, emailPattern, bookingPrice, endHour, overlaps, formatBookingHour } from "@/lib/studio-booking";
 
 const lessonTypes = [
@@ -40,7 +44,7 @@ const lessonTypes = [
     title: "Csoportos óra",
     capacity: "36 fő",
     description: "Táncóra nagyobb csoport számára.",
-    Icon: Users,
+    Icon: UserRoundGroup,
   },
 ];
 
@@ -119,12 +123,19 @@ function formatHour(hour) {
   return formatBookingHour(hour);
 }
 
+// A többi űrlappal (jelentkezés, tánctábor) egyező beviteli mező stílus
+const dialogInput =
+  "w-full rounded-2xl border-2 border-transparent bg-gray-50 px-5 py-4 font-semibold text-black placeholder:font-medium placeholder:text-gray-300 transition-colors focus:border-[#40CFD5]/60 focus:outline-none disabled:opacity-60";
+
 function BookingDialog({ onClose, slots, lessonType }) {
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const sendingRef = useRef(false);
   const totalPrice = slots.reduce((total, slot) => total + bookingPrice(slot), 0);
+  const sortedSlots = [...slots].sort((a, b) =>
+    a.date.localeCompare(b.date) || a.hour - b.hour || a.room.localeCompare(b.room),
+  );
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -196,9 +207,10 @@ function BookingDialog({ onClose, slots, lessonType }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose, submitted]);
 
-  return (
+  // Portál a <body>-ba, hogy a fix menüsor se lógjon a párbeszédablak fölé.
+  return createPortal(
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-black/65 px-4 py-8 backdrop-blur-sm"
+      className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-black/70 px-4 py-8 backdrop-blur-sm"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !sendingRef.current) onClose(submitted);
       }}
@@ -208,7 +220,7 @@ function BookingDialog({ onClose, slots, lessonType }) {
         aria-modal="true"
         aria-labelledby="booking-dialog-title"
         aria-describedby="booking-dialog-description"
-        className="relative my-auto w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl sm:p-8"
+        className={`relative my-auto w-full rounded-[2rem] bg-white p-6 shadow-2xl sm:p-9 ${submitted ? "max-w-lg" : "max-w-4xl"}`}
       >
         <button
           type="button"
@@ -250,13 +262,14 @@ function BookingDialog({ onClose, slots, lessonType }) {
             <button
               type="button"
               onClick={() => onClose(submitted)}
-              className="mt-6 w-full rounded-xl bg-black px-5 py-3 font-bold text-white transition-colors hover:bg-[#40CFD5] hover:text-black"
+              className="mt-6 w-full rounded-2xl bg-black px-5 py-4 text-sm font-extrabold uppercase tracking-[0.2em] text-white transition-colors hover:bg-[#40CFD5] hover:text-black"
             >
               Bezárás
             </button>
           </div>
         ) : (
-          <>
+          <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_300px] md:gap-10">
+          <div className="order-2 md:order-1">
             <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-[#087c81]">
               Stúdió bérlés
             </p>
@@ -275,9 +288,9 @@ function BookingDialog({ onClose, slots, lessonType }) {
               megerősítése után válik véglegessé.
             </p>
 
-            <form onSubmit={handleSubmit} noValidate aria-busy={sending} className="space-y-4">
+            <form onSubmit={handleSubmit} noValidate aria-busy={sending} className="space-y-5">
               <div>
-                <label htmlFor="booking-name" className="mb-1.5 block text-sm font-semibold text-gray-800">
+                <label htmlFor="booking-name" className="mb-2.5 ml-3 block text-[11px] font-extrabold uppercase tracking-widest text-gray-400">
                   Név
                 </label>
                 <input
@@ -290,11 +303,11 @@ function BookingDialog({ onClose, slots, lessonType }) {
                   maxLength={200}
                   autoFocus
                   onInput={(event) => event.currentTarget.setCustomValidity("")}
-                  className="md-input"
+                  className={dialogInput}
                 />
               </div>
               <div>
-                <label htmlFor="booking-email" className="mb-1.5 block text-sm font-semibold text-gray-800">
+                <label htmlFor="booking-email" className="mb-2.5 ml-3 block text-[11px] font-extrabold uppercase tracking-widest text-gray-400">
                   E-mail cím
                 </label>
                 <input
@@ -307,11 +320,11 @@ function BookingDialog({ onClose, slots, lessonType }) {
                   disabled={sending}
                   maxLength={254}
                   onInput={(event) => event.currentTarget.setCustomValidity("")}
-                  className="md-input"
+                  className={dialogInput}
                 />
               </div>
               <div>
-                <label htmlFor="booking-phone" className="mb-1.5 block text-sm font-semibold text-gray-800">
+                <label htmlFor="booking-phone" className="mb-2.5 ml-3 block text-[11px] font-extrabold uppercase tracking-widest text-gray-400">
                   Telefonszám
                 </label>
                 <input
@@ -325,17 +338,11 @@ function BookingDialog({ onClose, slots, lessonType }) {
                   disabled={sending}
                   maxLength={40}
                   onInput={(event) => event.currentTarget.setCustomValidity("")}
-                  className="md-input"
+                  className={dialogInput}
                 />
-                <p id="booking-phone-hint" className="mt-1.5 text-xs text-gray-500">
+                <p id="booking-phone-hint" className="ml-3 mt-2 text-xs text-gray-500">
                   Nemzetközi formátum, országkóddal (például +36).
                 </p>
-              </div>
-              <div className="flex items-center justify-between gap-3 border-t border-gray-200 pt-4">
-                <span className="text-sm font-bold text-gray-700">Összesen</span>
-                <span className="text-lg font-extrabold text-[#087c81]">
-                  {huCurrency.format(totalPrice)}
-                </span>
               </div>
               {submitError && (
                 <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800">
@@ -345,7 +352,7 @@ function BookingDialog({ onClose, slots, lessonType }) {
               <button
                 type="submit"
                 disabled={sending}
-                className="w-full rounded-xl bg-[#40CFD5] px-5 py-3.5 font-extrabold text-black transition-colors hover:bg-black hover:text-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#40CFD5]/40 disabled:cursor-wait disabled:opacity-60"
+                className="w-full rounded-2xl bg-black px-5 py-4 text-sm font-extrabold uppercase tracking-[0.2em] text-white shadow-xl transition-colors hover:bg-[#40CFD5] hover:text-black focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#40CFD5]/40 disabled:cursor-wait disabled:opacity-60"
               >
                 {sending ? "Küldés folyamatban…" : "Foglalási igény elküldése"}
               </button>
@@ -354,10 +361,46 @@ function BookingDialog({ onClose, slots, lessonType }) {
                 stúdiónak a foglalási igény feldolgozásához.
               </p>
             </form>
-          </>
+          </div>
+
+          {/* Jobb oldalt: a kiválasztott időpontok és termek összesítője */}
+          <aside
+            aria-label="Kiválasztott időpontok"
+            className="order-1 flex flex-col rounded-3xl bg-[#40CFD5]/10 p-5 ring-1 ring-[#40CFD5]/40 mt-8 md:order-2 md:mt-10 md:self-start"
+          >
+            <p className="text-[11px] font-extrabold uppercase tracking-widest text-[#087c81]">
+              Kiválasztott időpontok ({slots.length})
+            </p>
+            <ul className="mt-3 max-h-[min(340px,40vh)] space-y-2 overflow-y-auto overscroll-contain pr-1">
+              {sortedSlots.map((slot) => (
+                <li
+                  key={`${slot.room}-${slot.date}-${slot.hour}`}
+                  className="rounded-2xl bg-white px-4 py-3 shadow-sm"
+                >
+                  <p className="text-sm font-extrabold text-black">{slot.room}</p>
+                  <div className="mt-1 flex items-baseline justify-between gap-3">
+                    <span className="text-xs font-semibold text-gray-600">
+                      {huDate.format(new Date(`${slot.date}T00:00:00`))}
+                      <br />
+                      {formatHour(slot.hour)}–{formatHour(endHour(slot))}
+                    </span>
+                    <span className="shrink-0 text-sm font-extrabold text-[#087c81]">
+                      {huCurrency.format(bookingPrice(slot))}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#40CFD5]/40 pt-4">
+              <span className="text-sm font-bold text-black">Összesen</span>
+              <span className="text-xl font-extrabold text-[#087c81]">{huCurrency.format(totalPrice)}</span>
+            </div>
+          </aside>
+          </div>
         )}
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -383,12 +426,16 @@ function getCalendarTitle(view, date) {
   }).format(date);
 }
 
-function StudioCalendar({ lessonType }) {
+function StudioCalendar({ lessonType, initialRoom, roomRequest }) {
   const [view, setView] = useState("week");
   const [selectedDate, setSelectedDate] = useState(() =>
     startOfDay(new Date()),
   );
-  const [activeRoom, setActiveRoom] = useState(null);
+  // Csoportos órához csak az első (Astoria - Nagy) terem választható.
+  const availableRooms = lessonType === "csoportos" ? [rooms[0]] : rooms;
+  const [activeRoom, setActiveRoom] = useState(
+    availableRooms.includes(initialRoom) ? initialRoom : availableRooms[0],
+  );
   const calendarRef = useRef(null);
   const [scrollRequest, setScrollRequest] = useState(null);
   const [selectedSlots, setSelectedSlots] = useState([]);
@@ -409,6 +456,40 @@ function StudioCalendar({ lessonType }) {
   const [currentTime, setCurrentTime] = useState(() => new Date());
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
   const [bookingSlots, setBookingSlots] = useState([]);
+  // Az alsó, fix összesítő magasságával megegyező térköz az oldal alján,
+  // hogy teljesen legörgetve se takarja el a láblécet.
+  const drawerRef = useRef(null);
+  const drawerOpen = selectedSlots.length > 0;
+  useEffect(() => {
+    const el = drawerRef.current;
+    if (!drawerOpen || !el) return;
+    const apply = () => { document.body.style.paddingBottom = `${el.offsetHeight}px`; };
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      document.body.style.paddingBottom = "";
+    };
+  }, [drawerOpen]);
+
+  // A naptárhoz görgetünk, az aktuális időpont környékére (a képernyő közepére igazítva).
+  const requestScrollToNow = () => {
+    const now = new Date();
+    const hour = now.getHours() + Math.floor(now.getMinutes() / 30) / 2;
+    setScrollRequest({ hour: hour >= 8 && hour < 22 ? hour : 8, at: Date.now() });
+  };
+  // Óratípus választásakor (a naptár megjelenésekor)
+  useEffect(() => {
+    requestScrollToNow();
+  }, []);
+  // A terem-modal „Foglalás” gombja: a megfelelő fül kiválasztása + odagörgetés
+  useEffect(() => {
+    if (!roomRequest) return;
+    if (availableRooms.includes(roomRequest.room)) setActiveRoom(roomRequest.room);
+    requestScrollToNow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomRequest?.id]);
 
   useEffect(() => {
     if (!scrollRequest) return;
@@ -419,7 +500,7 @@ function StudioCalendar({ lessonType }) {
       ) || calendar;
       target?.scrollIntoView({
         behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
-        block: "start",
+        block: "center",
         inline: "nearest",
       });
     });
@@ -576,70 +657,6 @@ function StudioCalendar({ lessonType }) {
 
   return (
     <>
-    <section className="mt-12" aria-labelledby="room-chooser-title">
-      <div className="mb-8 text-center sm:mb-10">
-        <h2 id="room-chooser-title" className="section-title text-4xl text-black sm:text-5xl">
-          Melyik termet választanád?
-        </h2>
-        <p className="mt-3 text-sm text-gray-600 sm:text-base">
-          Válassz termet az elérhető időpontok megtekintéséhez.
-        </p>
-        {lessonType === "csoportos" && (
-          <p className="mt-2 text-sm font-semibold text-[#087c81]">
-            Csoportos órához csak az Astoria - Nagy Terem választható.
-          </p>
-        )}
-      </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
-        {rooms.map((room, index) => {
-          const selected = activeRoom === room;
-          const unavailable = lessonType === "csoportos" && room !== rooms[0];
-          return (
-            <motion.button
-              key={room}
-              id={`room-card-${index}`}
-              type="button"
-              aria-pressed={selected}
-              aria-controls="room-calendar-panel"
-              disabled={unavailable}
-              onClick={() => {
-                const now = new Date();
-                const hour = now.getHours() + Math.floor(now.getMinutes() / 30) / 2;
-                setActiveRoom(room);
-                setScrollRequest({ hour: hour >= 8 && hour < 22 ? hour : 8 });
-              }}
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: index * 0.1 }}
-              whileHover={unavailable ? undefined : { y: -5 }}
-              whileTap={unavailable ? undefined : { scale: 0.99 }}
-              className={`relative flex min-h-[220px] flex-col items-center justify-center rounded-3xl border-2 px-6 py-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.07)] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#40CFD5]/40 disabled:cursor-not-allowed disabled:opacity-50 ${
-                selected
-                  ? "border-[#40CFD5] bg-[#40CFD5]/10"
-                  : "border-white bg-white enabled:hover:border-[#40CFD5]"
-              }`}
-            >
-              <span className={`mb-5 flex h-16 w-16 items-center justify-center rounded-2xl ${
-                selected ? "bg-[#40CFD5] text-black" : "bg-black text-white"
-              }`}>
-                <DoorOpen size={32} strokeWidth={1.8} aria-hidden="true" />
-              </span>
-              <span className="text-xl font-extrabold text-black sm:text-2xl">{room}</span>
-              {unavailable && (
-                <span className="mt-3 text-sm text-gray-600">Ehhez az óratípushoz nem választható.</span>
-              )}
-              {selected && (
-                <span aria-label="Kiválasztva"
-                  className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full bg-[#40CFD5] text-black">
-                  <Check size={17} strokeWidth={3} />
-                </span>
-              )}
-            </motion.button>
-          );
-        })}
-      </div>
-    </section>
-    {activeRoom && (
     <motion.section
       ref={calendarRef}
       initial={{ opacity: 0, y: 24 }}
@@ -738,50 +755,83 @@ function StudioCalendar({ lessonType }) {
         </label>
       </div>
 
-      <div className="mb-5 flex flex-col gap-4 rounded-2xl border border-gray-200 bg-[#f7f7f7] p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <Clock3 size={18} aria-hidden="true" className="shrink-0 text-[#087c81]" />
-          <p className="text-sm leading-relaxed text-gray-600">
-            Kattintson egy szabad időpontra. A felső nyíllal fél órával korábbra
-            hozhatja a kezdést, az alsóval fél órával későbbre tolhatja a befejezést.
-            Minimum 1 óra foglalható. A kijelölt időszakra kattintva törölheti a kijelölést.
+      {/* Teremválasztó fülek (mint korábban) */}
+      <div className="mb-5" role="tablist" aria-label="Válassz termet">
+        {lessonType === "csoportos" && (
+          <p className="mb-2 text-center text-sm font-semibold text-[#087c81]">
+            Csoportos órához csak az Astoria - Nagy Terem választható.
           </p>
-        </div>
-        <div className="flex flex-wrap gap-4 text-xs font-semibold text-gray-600">
-          <span className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded bg-white ring-1 ring-gray-300" />
-            Szabad
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded bg-gray-300" />
-            Elmúlt időpont
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded bg-amber-200 ring-1 ring-amber-400" />
-            Igény elküldve, jóváhagyásra vár
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded bg-blue-100 ring-1 ring-blue-400" />
-            Foglalás alatt
-          </span>
+        )}
+        <div className="overflow-x-auto rounded-2xl bg-gray-100 p-1.5">
+          <div className="flex w-max min-w-full justify-center gap-1.5">
+            {availableRooms.map((room) => (
+              <button
+                key={room}
+                type="button"
+                role="tab"
+                id={`room-tab-${rooms.indexOf(room)}`}
+                aria-controls="room-calendar-panel"
+                aria-selected={activeRoom === room}
+                onClick={() => setActiveRoom(room)}
+                className={`min-h-11 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold transition-colors sm:px-5 ${
+                  activeRoom === room
+                    ? "bg-black text-white shadow-sm"
+                    : "text-gray-600 hover:bg-white hover:text-black"
+                }`}
+              >
+                {room}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       <div
         id="room-calendar-panel"
-        role="region"
-        aria-labelledby={`room-card-${rooms.indexOf(activeRoom)}`}
+        role="tabpanel"
+        aria-labelledby={`room-tab-${rooms.indexOf(activeRoom)}`}
         className="rounded-2xl border border-gray-200 bg-[#f7f7f7] p-3 sm:p-4"
       >
-        <div className={`mb-4 flex gap-2 ${
-          view === "day"
-            ? "flex-col items-center text-center"
-            : "flex-wrap items-center justify-between"
-        }`}>
-          <h3 className="text-lg font-extrabold text-black">{activeRoom}</h3>
-          <span className="rounded-full bg-[#40CFD5]/20 px-3 py-1 text-xs font-bold text-[#087c81]">
-            {view === "day" ? "Napi foglaltság" : view === "week" ? "Heti foglaltság" : "Havi foglaltság"}
-          </span>
+        {/* Terem neve + kompakt súgó és jelmagyarázat (a korábbi „Heti foglaltság” címke helyén) */}
+        <div className="mb-4 flex flex-col gap-x-6 gap-y-2.5 lg:flex-row lg:items-center lg:justify-between">
+          <h3 className="shrink-0 text-lg font-extrabold text-black">{activeRoom}</h3>
+          <div className="flex flex-col gap-x-5 gap-y-1.5 text-xs text-gray-600 xl:flex-row xl:items-center">
+            <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5" aria-label="Használat">
+              <li className="flex items-center gap-1.5">
+                <MousePointerClick size={14} aria-hidden="true" className="text-[#087c81]" />
+                Kattints egy szabad sávra
+              </li>
+              <li className="flex items-center gap-1.5">
+                <span className="flex" aria-hidden="true">
+                  <ChevronUp size={14} className="text-[#087c81]" />
+                  <ChevronDown size={14} className="-ml-1 text-[#087c81]" />
+                </span>
+                ±&nbsp;fél óra a nyilakkal
+              </li>
+              <li className="flex items-center gap-1.5">
+                <Clock3 size={14} aria-hidden="true" className="text-[#087c81]" />
+                Min. 1 óra
+              </li>
+            </ul>
+            <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5 font-semibold" aria-label="Jelmagyarázat">
+              <li className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded bg-white ring-1 ring-gray-300" />
+                Szabad
+              </li>
+              <li className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded bg-gray-300" />
+                Elmúlt
+              </li>
+              <li className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded bg-amber-200 ring-1 ring-amber-400" />
+                Jóváhagyásra vár
+              </li>
+              <li className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded bg-blue-100 ring-1 ring-blue-400" />
+                Foglalt
+              </li>
+            </ul>
+          </div>
         </div>
 
       {view === "day" && (
@@ -915,10 +965,10 @@ function StudioCalendar({ lessonType }) {
         A foglalások állapota 10 másodpercenként frissül.
       </p>
     </motion.section>
-    )}
-    {/* A fix összesítő az animált szakaszon kívül marad, így a képernyő aljához rögzül. */}
-    {selectedSlots.length > 0 && (
+    {/* A fix összesítő portállal a <body>-ba kerül, így semmilyen szekció (pl. a lábléc) nem takarja el. */}
+    {selectedSlots.length > 0 && createPortal(
       <div
+        ref={drawerRef}
         role="status"
         aria-live="polite"
         className="fixed inset-x-0 bottom-0 z-[60] border-t border-[#40CFD5]/60 bg-white/95 shadow-[0_-8px_30px_rgba(0,0,0,0.14)] backdrop-blur-md"
@@ -1015,7 +1065,8 @@ function StudioCalendar({ lessonType }) {
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body,
     )}
     {bookingDialogOpen && (
       <BookingDialog
@@ -1030,19 +1081,49 @@ function StudioCalendar({ lessonType }) {
 
 export default function StudioBerlesPage() {
   const [selectedType, setSelectedType] = useState(null);
+  // A terem-modalból kért foglalás: melyik terem füle legyen kiválasztva
+  const [pendingRoom, setPendingRoom] = useState(null);
+  const [roomRequest, setRoomRequest] = useState(null);
+  const [typeHint, setTypeHint] = useState("");
+
+  const scrollToLessonTypes = () => {
+    window.requestAnimationFrame(() =>
+      document.getElementById("lesson-type-title")?.scrollIntoView({ behavior: "smooth", block: "center" }),
+    );
+  };
+
+  const bookRoom = (room) => {
+    setPendingRoom(room);
+    if (!selectedType) {
+      // Még nincs óratípus: előbb azt kell kiválasztani, utána a naptár ezzel a teremmel nyílik.
+      setTypeHint(`Válaszd ki az óratípust, és megnyílik a(z) ${room} naptára.`);
+      scrollToLessonTypes();
+      return;
+    }
+    if (selectedType === "csoportos" && room !== rooms[0]) {
+      setTypeHint(`Csoportos órához csak az ${rooms[0]} választható — a(z) ${room} foglalásához válassz privát vagy kiscsoportos órát.`);
+      scrollToLessonTypes();
+      return;
+    }
+    setTypeHint("");
+    setRoomRequest({ room, id: Date.now() });
+  };
 
   return (
     <main className="min-h-screen bg-[#f7f7f7]">
       <Navbar />
       <section
-        className="relative flex min-h-[390px] items-center justify-center overflow-hidden bg-black px-5 pb-12 pt-32 text-center sm:min-h-[440px] sm:pt-36"
+        className="relative z-10 flex min-h-[390px] items-center justify-center bg-black px-5 pb-16 pt-32 text-center sm:min-h-[440px] sm:pt-36"
         style={{
           backgroundImage:
             "linear-gradient(0deg, rgba(0,0,0,0.76), rgba(0,0,0,0.48)), url('/canva/hero-crowd.jpg')",
           backgroundPosition: "center 42%",
           backgroundSize: "cover",
+          overflowX: "clip",
         }}
       >
+        {/* Animált halftone-pöttyök, mint a többi oldal fejlécében */}
+        <HalftoneDots size={240} zIndex={1} style={{ bottom: -80, left: -90 }} />
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#f7f7f7] to-transparent"
@@ -1060,30 +1141,31 @@ export default function StudioBerlesPage() {
             STÚDIÓ BÉRLÉS
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-white/90 sm:text-lg">
-            Válaszd ki, milyen létszámú órát szeretnél tartani a stúdióban.
+            Nézd meg a termeinket, válaszd ki az óratípust, és foglalj időpontot pár kattintással.
           </p>
         </motion.div>
       </section>
 
-      <section className="relative px-4 pb-20 sm:px-6 sm:pb-28">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute left-0 top-16 h-40 w-40 opacity-[0.12] sm:left-8"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle, #000 1.5px, transparent 1.5px)",
-            backgroundSize: "13px 13px",
-          }}
-        />
+      <section className="relative px-4 pb-20 pt-6 sm:px-6 sm:pb-28" style={{ overflowX: "clip" }}>
+        {/* Ugyanaz az animált halftone-minta, mint a többi oldalon */}
+        <HalftoneDots className="hidden md:block" size={240} zIndex={0} style={{ top: "44%", right: -120 }} />
 
-        <div className="relative mx-auto -mt-10 max-w-7xl sm:-mt-14">
+        <div className="relative z-10 mx-auto max-w-7xl">
+          {/* 4 terem kártyája — kattintásra részletes modal */}
+          <RoomShowcase onBook={bookRoom} />
+
           <div className="mb-8 text-center sm:mb-10">
-            <h2 className="section-title text-4xl text-black sm:text-5xl">
+            <h2 id="lesson-type-title" className="section-title scroll-mt-32 text-4xl text-black sm:text-5xl">
               Milyen órát tartanál?
             </h2>
             <p className="mt-3 text-sm text-gray-600 sm:text-base">
               Válassz egyet a három óratípus közül.
             </p>
+            {typeHint && (
+              <p role="status" className="mx-auto mt-4 inline-block rounded-full bg-[#40CFD5]/15 px-4 py-2 text-sm font-semibold text-[#087c81]">
+                {typeHint}
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5">
@@ -1095,7 +1177,10 @@ export default function StudioBerlesPage() {
                   key={id}
                   type="button"
                   aria-pressed={selected}
-                  onClick={() => setSelectedType(id)}
+                  onClick={() => {
+                    setSelectedType(id);
+                    setTypeHint("");
+                  }}
                   initial={{ opacity: 0, y: 18 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.45, delay: index * 0.1 }}
@@ -1137,9 +1222,17 @@ export default function StudioBerlesPage() {
           </div>
 
           {/* Óratípusváltáskor új naptár indul; a mentett foglaltságot újra betöltjük. */}
-          {selectedType && <StudioCalendar key={selectedType} lessonType={selectedType} />}
+          {selectedType && (
+            <StudioCalendar
+              key={selectedType}
+              lessonType={selectedType}
+              initialRoom={pendingRoom}
+              roomRequest={roomRequest}
+            />
+          )}
         </div>
       </section>
+      <Footer />
     </main>
   );
 }

@@ -15,7 +15,7 @@ const request = () => ({
   customer: { name: "Teszt Elek", email: "teszt@example.hu", phone: "+36 (30) 123-4567" },
   slots: [
     { room: "Astoria - Nagy Terem", date: "2026-10-15", hour: 14, price: 1 },
-    { room: "Opera - Kis Terem", date: "2026-10-15", hour: 14, price: 1 },
+    { room: "Opera - Közepes Terem", date: "2026-10-15", hour: 14, price: 1 },
   ],
   total: 2,
 });
@@ -90,7 +90,7 @@ test("half-hour starts and duration pricing respect minimum, closing and overlap
 });
 
 test("previously demo-occupied slots pass validation for all rooms and hours", () => {
-  for (const room of ["Astoria - Nagy Terem", "Astoria - Kis Terem", "Opera - Nagy Terem", "Opera - Kis Terem"]) {
+  for (const room of ["Astoria - Nagy Terem", "Astoria - Kis Terem", "Opera - Nagy Terem", "Opera - Közepes Terem"]) {
     for (let hour = 8; hour <= 21; hour++) {
       const input = request();
       input.slots = [{ room, date: "2026-10-15", hour }];
