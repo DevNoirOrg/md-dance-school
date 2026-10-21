@@ -59,7 +59,7 @@ export default function Hero() {
       />
 
       {/* ── Halftone dot pattern — bal alsó sarok, kisebb, alig lóg ki ── */}
-      <HalftoneDots size={260} style={{ bottom: -30, left: -20 }} />
+      <HalftoneDots size={260} style={{ bottom: -60, left: -100 }} />
 
       {/* ── WELCOME TO MD — fő cím, alulról csúszik be ── */}
       <div
@@ -98,6 +98,41 @@ export default function Hero() {
         >
           WELCOME TO MD
         </motion.h1>
+      </div>
+
+      {/* ── Bemutatkozó mondat — a cím alatti rész kb. felénél, a színpadon ── */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: "calc(75% + 100px)",
+          transform: "translateY(-50%)",
+          display: "flex",
+          justifyContent: "center",
+          padding: "0 6vw",
+          zIndex: 10,
+        }}
+      >
+        <motion.p
+          className="lg:whitespace-nowrap"
+          initial={{ y: 30, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.8, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}
+          style={{
+            margin: 0,
+            textAlign: "center",
+            color: "#ffffff",
+            fontWeight: 600,
+            fontSize: "clamp(14px, 1.35vw, 22px)",
+            lineHeight: 1.45,
+            textShadow:
+              "0 2px 18px rgba(0,0,0,0.65), 0 1px 3px rgba(0,0,0,0.5)",
+          }}
+        >
+          Hip-hop, house és koreográfia kezdőtől haladóig – fejezd ki magad
+          a tánccal, és éld át velünk az MD életérzést!
+        </motion.p>
       </div>
     </section>
   );

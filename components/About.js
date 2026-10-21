@@ -33,7 +33,7 @@ function FadeIn({ children, delay = 0, direction = "up", className = "" }) {
 
 export default function About() {
   return (
-    <section id="rolunk" className="relative z-10">
+    <section id="rolunk" className="relative z-40">
       <HalftoneDots className="hidden md:block" size={300} style={{ top: -40, right: -170 }} zIndex={-1} />
 
       <div className="py-20 sm:py-28 px-4 max-w-7xl mx-auto">
@@ -80,7 +80,7 @@ export default function About() {
           <FadeIn
             delay={0.1}
             direction="left"
-            className="flex justify-center md:justify-end"
+            className="flex justify-center md:justify-end md:pr-10 lg:pr-20"
           >
             <motion.div
               className="relative w-full"

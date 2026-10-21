@@ -7,9 +7,9 @@ import { usePathname } from "next/navigation";
 
 const navLinks = [
   { label: "Kezdőlap", href: "#hero" },
-  { label: "Tánctábor", href: "#tancabor" },
-  { label: "Órarend", href: "#orarend" },
-  { label: "Szolgáltatások", href: "#szolgaltatasok" },
+  { label: "Tánctábor", href: "/tanctabor" },
+  { label: "Órarend", href: "/orarend" },
+  { label: "Szolgáltatások", href: "/szolgaltatasok" },
   { label: "Stúdió bérlés", href: "/studio-berles" },
   { label: "Elérhetőség", href: "#elerhetoseg" },
 ];
@@ -23,7 +23,7 @@ export default function Navbar() {
 
   useEffect(() => {
     if (pathname !== "/") {
-      setActiveHref(pathname === "/studio-berles" ? "/studio-berles" : "");
+      setActiveHref(navLinks.some((link) => link.href === pathname) ? pathname : "");
       return;
     }
 
