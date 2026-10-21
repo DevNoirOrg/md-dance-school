@@ -10,13 +10,15 @@ import {
   ChevronRight,
   ChevronUp,
   Clock3,
+  DoorOpen,
   X,
   UserRound,
   Users,
   UsersRound,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import { rooms, roomPrices, emailPattern } from "@/lib/studio-booking";
+import BookingTimeline from "@/components/BookingTimeline";
+import { rooms, emailPattern, bookingPrice, endHour, overlaps, formatBookingHour } from "@/lib/studio-booking";
 
 const lessonTypes = [
   {
@@ -48,8 +50,8 @@ const huCurrency = new Intl.NumberFormat("hu-HU", {
   maximumFractionDigits: 0,
 });
 
-// Egyórás idősávok 08:00 és 22:00 között; az utolsó sáv 21:00-kor kezdődik.
-const hours = Array.from({ length: 14 }, (_, index) => index + 8);
+// Egyórás kezdési lehetőségek félóránként, legkésőbb 21:00-kor.
+const hours = Array.from({ length: 27 }, (_, index) => 8 + index / 2);
 const weekdays = ["H", "K", "Sze", "Cs", "P", "Szo", "V"];
 const views = [
   { id: "day", label: "Nap" },
@@ -89,7 +91,7 @@ function getWeekStart(date) {
 
 function isPastSlot(date, hour, now = new Date()) {
   const slotStart = new Date(date);
-  slotStart.setHours(hour, 0, 0, 0);
+  slotStart.setHours(Math.floor(hour), Math.round((hour % 1) * 60), 0, 0);
   return slotStart <= now;
 }
 
@@ -100,9 +102,7 @@ function getAvailableHourCount(room, date, now, pendingSlots, approvedSlots) {
       !isPastSlot(date, hour, now) &&
       ![...pendingSlots, ...approvedSlots].some(
         (slot) =>
-          slot.room === room &&
-          slot.date === dateKey(date) &&
-          slot.hour === hour,
+          overlaps(slot, { room, date: dateKey(date), hour, durationMinutes: 60 }),
       ),
   ).length;
 }
@@ -116,107 +116,7 @@ function getMonthDays(date) {
 }
 
 function formatHour(hour) {
-  return `${String(hour).padStart(2, "0")}:00`;
-}
-
-function TimeSlot({
-  room,
-  date,
-  hour,
-  selected,
-  pendingSlots,
-  approvedSlots,
-  availabilityReady,
-  onSelect,
-  now,
-  showHour = false,
-}) {
-  const inProgress = approvedSlots.some(
-    (slot) => slot.room === room && slot.date === dateKey(date) && slot.hour === hour,
-  );
-  const past = isPastSlot(date, hour, now);
-  const pending = pendingSlots.some(
-    (slot) =>
-      slot.room === room &&
-      slot.date === dateKey(date) &&
-      slot.hour === hour,
-  );
-  // A függőben lévő igény is tiltja az új kijelölést, de külön színt kap.
-  const unavailable = past || pending || inProgress || !availabilityReady;
-  const label = `${room}, ${huDate.format(date)}, ${formatHour(hour)}`;
-
-  return (
-    <button
-      type="button"
-      disabled={unavailable}
-      aria-label={
-        !availabilityReady
-          ? `${label} – foglaltság betöltése`
-          : inProgress
-            ? `${label} – foglalás alatt`
-          : pending
-            ? `${label} – foglalási igény, jóváhagyásra vár`
-            : past
-            ? `${label} – elmúlt időpont`
-            : `${label} – szabad idősáv kiválasztása`
-      }
-      aria-pressed={selected}
-      onClick={() => onSelect({ room, date: dateKey(date), hour })}
-      className={`flex h-10 w-full items-center justify-center rounded-lg border text-xs font-semibold transition-colors ${
-        inProgress
-          ? "cursor-not-allowed border-blue-400 bg-blue-100 text-blue-900"
-          : pending
-          ? "cursor-not-allowed border-amber-300 bg-amber-100 text-amber-900"
-          : unavailable
-            ? "cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400"
-          : selected
-            ? "border-[#40CFD5] bg-[#40CFD5] text-black"
-            : "border-gray-200 bg-white text-gray-600 hover:border-[#40CFD5] hover:bg-[#40CFD5]/10"
-      }`}
-    >
-      {showHour && <span>{formatHour(hour)}</span>}
-    </button>
-  );
-}
-
-function RoomDayColumn({
-  room,
-  date,
-  selectedSlots,
-  pendingSlots,
-  approvedSlots,
-  availabilityReady,
-  onSelect,
-  now,
-}) {
-  return (
-    <div className="min-w-[150px] flex-1">
-      <div className="space-y-2 rounded-xl border border-gray-200 bg-white p-2">
-        {hours.map((hour) => (
-            <TimeSlot
-              key={hour}
-              room={room}
-              date={date}
-              hour={hour}
-              selected={
-                selectedSlots.some(
-                  (slot) =>
-                    slot.room === room &&
-                    slot.date === dateKey(date) &&
-                    slot.hour === hour,
-                )
-              }
-              pendingSlots={pendingSlots}
-              approvedSlots={approvedSlots}
-              availabilityReady={availabilityReady}
-              onSelect={onSelect}
-              now={now}
-              showHour
-            />
-        ))}
-      </div>
-    </div>
-  );
+  return formatBookingHour(hour);
 }
 
 function BookingDialog({ onClose, slots, lessonType }) {
@@ -224,7 +124,7 @@ function BookingDialog({ onClose, slots, lessonType }) {
   const [sending, setSending] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const sendingRef = useRef(false);
-  const totalPrice = slots.reduce((total, slot) => total + roomPrices[slot.room], 0);
+  const totalPrice = slots.reduce((total, slot) => total + bookingPrice(slot), 0);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -484,14 +384,13 @@ function getCalendarTitle(view, date) {
 }
 
 function StudioCalendar({ lessonType }) {
-  // A 36 fős óratípushoz csak az Astoria nagy terme választható.
-  const availableRooms =
-    lessonType === "csoportos" ? [rooms[0]] : rooms;
   const [view, setView] = useState("week");
   const [selectedDate, setSelectedDate] = useState(() =>
     startOfDay(new Date()),
   );
-  const [activeRoom, setActiveRoom] = useState(availableRooms[0]);
+  const [activeRoom, setActiveRoom] = useState(null);
+  const calendarRef = useRef(null);
+  const [scrollRequest, setScrollRequest] = useState(null);
   const [selectedSlots, setSelectedSlots] = useState([]);
   const [drawerExpanded, setDrawerExpanded] = useState(true);
   const hasSelectedSlots = selectedSlots.length > 0;
@@ -510,6 +409,22 @@ function StudioCalendar({ lessonType }) {
   const [currentTime, setCurrentTime] = useState(() => new Date());
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
   const [bookingSlots, setBookingSlots] = useState([]);
+
+  useEffect(() => {
+    if (!scrollRequest) return;
+    const frame = window.requestAnimationFrame(() => {
+      const calendar = calendarRef.current;
+      const target = calendar?.querySelector(
+        `[data-booking-hour="${scrollRequest.hour}"]`,
+      ) || calendar;
+      target?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+        block: "start",
+        inline: "nearest",
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [scrollRequest]);
 
   // A szerver a közös adatbázisból adja vissza az állapotokat; fókuszkor is frissítünk.
   useEffect(() => {
@@ -533,8 +448,7 @@ function StudioCalendar({ lessonType }) {
           ...result.slots,
         ]);
         setSelectedSlots((current) => current.filter((slot) =>
-          !result.slots.some((saved) =>
-            saved.room === slot.room && saved.date === slot.date && saved.hour === slot.hour),
+          !result.slots.some((saved) => overlaps(slot, saved)),
         ));
         setAvailabilityError("");
         setLoadedRange(rangeKey);
@@ -598,12 +512,7 @@ function StudioCalendar({ lessonType }) {
     if (
       !availabilityReady ||
       isPastSlot(slotDate, slot.hour) ||
-      storedSlots.some(
-        (pending) =>
-          pending.room === slot.room &&
-          pending.date === slot.date &&
-          pending.hour === slot.hour,
-      )
+      storedSlots.some((saved) => overlaps(slot, saved))
     ) {
       return;
     }
@@ -623,7 +532,18 @@ function StudioCalendar({ lessonType }) {
             selected.hour !== slot.hour,
         );
       }
+      if (current.some((selected) => overlaps(slot, selected))) return current;
       return [...current, slot];
+    });
+  };
+  const resizeSlot = (original, next) => {
+    if (!availabilityReady || isPastSlot(new Date(`${next.date}T00:00:00`), next.hour) ||
+        storedSlots.some((saved) => overlaps(next, saved))) return;
+    setSelectedSlots((current) => {
+      const sameStart = (slot) => slot.room === original.room &&
+        slot.date === original.date && slot.hour === original.hour;
+      if (current.some((slot) => !sameStart(slot) && overlaps(slot, next))) return current;
+      return current.map((slot) => sameStart(slot) ? next : slot);
     });
   };
   const removeSlot = (slotToRemove) => {
@@ -648,19 +568,84 @@ function StudioCalendar({ lessonType }) {
     addDays(getWeekStart(selectedDate), index),
   );
   const monthDays = getMonthDays(selectedDate);
-  // Minden kijelölés egyórás, ezért a terem óradíjai adják a teljes összeget.
+  // Félóránként időarányosan számoljuk a terem óradíját.
   const totalPrice = selectedSlots.reduce(
-    (total, slot) => total + roomPrices[slot.room],
+    (total, slot) => total + bookingPrice(slot),
     0,
   );
 
   return (
     <>
+    <section className="mt-12" aria-labelledby="room-chooser-title">
+      <div className="mb-8 text-center sm:mb-10">
+        <h2 id="room-chooser-title" className="section-title text-4xl text-black sm:text-5xl">
+          Melyik termet választanád?
+        </h2>
+        <p className="mt-3 text-sm text-gray-600 sm:text-base">
+          Válassz termet az elérhető időpontok megtekintéséhez.
+        </p>
+        {lessonType === "csoportos" && (
+          <p className="mt-2 text-sm font-semibold text-[#087c81]">
+            Csoportos órához csak az Astoria - Nagy Terem választható.
+          </p>
+        )}
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
+        {rooms.map((room, index) => {
+          const selected = activeRoom === room;
+          const unavailable = lessonType === "csoportos" && room !== rooms[0];
+          return (
+            <motion.button
+              key={room}
+              id={`room-card-${index}`}
+              type="button"
+              aria-pressed={selected}
+              aria-controls="room-calendar-panel"
+              disabled={unavailable}
+              onClick={() => {
+                const now = new Date();
+                const hour = now.getHours() + Math.floor(now.getMinutes() / 30) / 2;
+                setActiveRoom(room);
+                setScrollRequest({ hour: hour >= 8 && hour < 22 ? hour : 8 });
+              }}
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, delay: index * 0.1 }}
+              whileHover={unavailable ? undefined : { y: -5 }}
+              whileTap={unavailable ? undefined : { scale: 0.99 }}
+              className={`relative flex min-h-[220px] flex-col items-center justify-center rounded-3xl border-2 px-6 py-7 text-center shadow-[0_8px_28px_rgba(0,0,0,0.07)] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#40CFD5]/40 disabled:cursor-not-allowed disabled:opacity-50 ${
+                selected
+                  ? "border-[#40CFD5] bg-[#40CFD5]/10"
+                  : "border-white bg-white enabled:hover:border-[#40CFD5]"
+              }`}
+            >
+              <span className={`mb-5 flex h-16 w-16 items-center justify-center rounded-2xl ${
+                selected ? "bg-[#40CFD5] text-black" : "bg-black text-white"
+              }`}>
+                <DoorOpen size={32} strokeWidth={1.8} aria-hidden="true" />
+              </span>
+              <span className="text-xl font-extrabold text-black sm:text-2xl">{room}</span>
+              {unavailable && (
+                <span className="mt-3 text-sm text-gray-600">Ehhez az óratípushoz nem választható.</span>
+              )}
+              {selected && (
+                <span aria-label="Kiválasztva"
+                  className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full bg-[#40CFD5] text-black">
+                  <Check size={17} strokeWidth={3} />
+                </span>
+              )}
+            </motion.button>
+          );
+        })}
+      </div>
+    </section>
+    {activeRoom && (
     <motion.section
+      ref={calendarRef}
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45 }}
-      className={`mt-12 rounded-3xl bg-white p-4 shadow-[0_10px_36px_rgba(0,0,0,0.09)] sm:p-7 ${
+      className={`mt-12 scroll-mt-28 rounded-3xl bg-white p-4 shadow-[0_10px_36px_rgba(0,0,0,0.09)] sm:p-7 ${
         selectedSlots.length ? "mb-52" : ""
       }`}
       aria-label="Teremfoglaltsági naptár"
@@ -680,7 +665,7 @@ function StudioCalendar({ lessonType }) {
             Válassz időpontot
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Válassz termet a fülek közül, majd nézd meg az elérhető időpontokat.
+            Nézd meg a kiválasztott terem elérhető időpontjait.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -753,38 +738,39 @@ function StudioCalendar({ lessonType }) {
         </label>
       </div>
 
-      <div
-        className="mb-5 overflow-x-auto rounded-2xl bg-gray-100 p-1.5"
-        role="tablist"
-        aria-label="Válassz termet"
-      >
-        <div className="flex w-max min-w-full justify-center gap-1.5">
-          {availableRooms.map((room) => (
-            <button
-              key={room}
-              type="button"
-              role="tab"
-              id={`room-tab-${rooms.indexOf(room)}`}
-              aria-controls="room-calendar-panel"
-              aria-pressed={activeRoom === room}
-              aria-selected={activeRoom === room}
-              onClick={() => setActiveRoom(room)}
-              className={`min-h-11 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold transition-colors sm:px-5 ${
-                activeRoom === room
-                  ? "bg-black text-white shadow-sm"
-                  : "text-gray-600 hover:bg-white hover:text-black"
-              }`}
-            >
-              {room}
-            </button>
-          ))}
+      <div className="mb-5 flex flex-col gap-4 rounded-2xl border border-gray-200 bg-[#f7f7f7] p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Clock3 size={18} aria-hidden="true" className="shrink-0 text-[#087c81]" />
+          <p className="text-sm leading-relaxed text-gray-600">
+            Kattintson egy szabad időpontra. A felső nyíllal fél órával korábbra
+            hozhatja a kezdést, az alsóval fél órával későbbre tolhatja a befejezést.
+            Minimum 1 óra foglalható. A kijelölt időszakra kattintva törölheti a kijelölést.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-4 text-xs font-semibold text-gray-600">
+          <span className="flex items-center gap-2">
+            <span className="h-3 w-3 rounded bg-white ring-1 ring-gray-300" />
+            Szabad
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="h-3 w-3 rounded bg-gray-300" />
+            Elmúlt időpont
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="h-3 w-3 rounded bg-amber-200 ring-1 ring-amber-400" />
+            Igény elküldve, jóváhagyásra vár
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="h-3 w-3 rounded bg-blue-100 ring-1 ring-blue-400" />
+            Foglalás alatt
+          </span>
         </div>
       </div>
 
       <div
         id="room-calendar-panel"
-        role="tabpanel"
-        aria-labelledby={`room-tab-${rooms.indexOf(activeRoom)}`}
+        role="region"
+        aria-labelledby={`room-card-${rooms.indexOf(activeRoom)}`}
         className="rounded-2xl border border-gray-200 bg-[#f7f7f7] p-3 sm:p-4"
       >
         <div className={`mb-4 flex gap-2 ${
@@ -800,14 +786,15 @@ function StudioCalendar({ lessonType }) {
 
       {view === "day" && (
         <div className="mx-auto max-w-xl">
-          <RoomDayColumn
+          <BookingTimeline
             room={activeRoom}
-            date={selectedDate}
+            date={dateKey(selectedDate)}
             selectedSlots={selectedSlots}
-            pendingSlots={pendingSlots}
-            approvedSlots={approvedSlots}
+            storedSlots={storedSlots}
             availabilityReady={availabilityReady}
             onSelect={selectSlot}
+            onResize={resizeSlot}
+            onRemove={removeSlot}
             now={currentTime}
           />
         </div>
@@ -815,7 +802,7 @@ function StudioCalendar({ lessonType }) {
 
       {view === "week" && (
         <div className="overflow-x-auto pb-2">
-          <div className="grid min-w-[980px] grid-cols-7 gap-2">
+          <div className="grid min-w-[980px] grid-cols-7">
             {visibleWeekDays.map((date) => (
               <div key={dateKey(date)}>
                 <button
@@ -824,7 +811,7 @@ function StudioCalendar({ lessonType }) {
                     setSelectedDate(date);
                     setView("day");
                   }}
-                  className={`mb-2 flex min-h-[62px] w-full flex-col items-center justify-center rounded-xl px-2 py-2 text-center transition-colors ${
+                  className={`flex min-h-[62px] w-full flex-col items-center justify-center border-r border-white/20 px-2 py-2 text-center transition-colors ${
                     dateKey(date) === dateKey(selectedDate)
                       ? "bg-[#40CFD5] text-black"
                       : "bg-black text-white hover:bg-gray-800"
@@ -837,30 +824,17 @@ function StudioCalendar({ lessonType }) {
                   </span>
                   <span className="text-lg font-extrabold">{date.getDate()}.</span>
                 </button>
-                <div className="space-y-2">
-                  {hours.map((hour) => (
-                    <TimeSlot
-                      key={hour}
-                      room={activeRoom}
-                      date={date}
-                      hour={hour}
-                      selected={
-                        selectedSlots.some(
-                          (slot) =>
-                            slot.room === activeRoom &&
-                            slot.date === dateKey(date) &&
-                            slot.hour === hour,
-                        )
-                      }
-                      pendingSlots={pendingSlots}
-                      approvedSlots={approvedSlots}
-                      availabilityReady={availabilityReady}
-                      onSelect={selectSlot}
-                      now={currentTime}
-                      showHour
-                    />
-                  ))}
-                </div>
+                <BookingTimeline
+                  room={activeRoom}
+                  date={dateKey(date)}
+                  selectedSlots={selectedSlots}
+                  storedSlots={storedSlots}
+                  availabilityReady={availabilityReady}
+                  onSelect={selectSlot}
+                  onResize={resizeSlot}
+                  onRemove={removeSlot}
+                  now={currentTime}
+                />
               </div>
             ))}
           </div>
@@ -915,7 +889,7 @@ function StudioCalendar({ lessonType }) {
                 {inMonth && (
                   <>
                     <span className="mt-1 hidden text-[10px] text-gray-500 sm:block">
-                      {availabilityReady ? `${available} szabad` : "Betöltés…"}
+                      {availabilityReady ? `${available} kezdés` : "Betöltés…"}
                     </span>
                     <span className="mt-1 flex gap-1" aria-hidden="true">
                       {available > 0 && (
@@ -937,38 +911,11 @@ function StudioCalendar({ lessonType }) {
       )}
       </div>
 
-      <div className="mt-5 flex flex-col gap-4 rounded-2xl border border-gray-200 bg-[#f7f7f7] p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <Clock3 size={18} aria-hidden="true" className="shrink-0 text-[#087c81]" />
-          <p className="text-sm leading-relaxed text-gray-600">
-            Foglalási igényének leadásához kattintson egy szabad idősávra.
-            Több időpontot is kiválaszthat.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-4 text-xs font-semibold text-gray-600">
-          <span className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded bg-white ring-1 ring-gray-300" />
-            Szabad
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded bg-gray-300" />
-            Elmúlt időpont
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded bg-amber-200 ring-1 ring-amber-400" />
-            Igény elküldve, jóváhagyásra vár
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded bg-blue-100 ring-1 ring-blue-400" />
-            Foglalás alatt
-          </span>
-        </div>
-      </div>
-
       <p className="mt-4 text-center text-xs text-gray-500">
         A foglalások állapota 10 másodpercenként frissül.
       </p>
     </motion.section>
+    )}
     {/* A fix összesítő az animált szakaszon kívül marad, így a képernyő aljához rögzül. */}
     {selectedSlots.length > 0 && (
       <div
@@ -1029,11 +976,11 @@ function StudioCalendar({ lessonType }) {
                     <span className="block truncate">{slot.room}</span>
                     <span className="block truncate text-xs font-semibold text-gray-700">
                       {huDate.format(new Date(`${slot.date}T00:00:00`))} ·{" "}
-                      {formatHour(slot.hour)}–{formatHour(slot.hour + 1)}
+                      {formatHour(slot.hour)}–{formatHour(endHour(slot))}
                     </span>
                   </p>
                   <span className="shrink-0 text-sm font-extrabold text-[#087c81]">
-                    {huCurrency.format(roomPrices[slot.room])}
+                    {huCurrency.format(bookingPrice(slot))}
                   </span>
                 </div>
                 <button
