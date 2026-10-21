@@ -14,6 +14,7 @@ import {
   X,
   UserRound,
   UsersRound,
+  MousePointerClick,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import UserRoundGroup from "@/components/icons/UserRoundGroup";
@@ -132,6 +133,9 @@ function BookingDialog({ onClose, slots, lessonType }) {
   const [submitError, setSubmitError] = useState("");
   const sendingRef = useRef(false);
   const totalPrice = slots.reduce((total, slot) => total + bookingPrice(slot), 0);
+  const sortedSlots = [...slots].sort((a, b) =>
+    a.date.localeCompare(b.date) || a.hour - b.hour || a.room.localeCompare(b.room),
+  );
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -216,7 +220,7 @@ function BookingDialog({ onClose, slots, lessonType }) {
         aria-modal="true"
         aria-labelledby="booking-dialog-title"
         aria-describedby="booking-dialog-description"
-        className="relative my-auto w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl sm:p-9"
+        className={`relative my-auto w-full rounded-[2rem] bg-white p-6 shadow-2xl sm:p-9 ${submitted ? "max-w-lg" : "max-w-4xl"}`}
       >
         <button
           type="button"
@@ -264,7 +268,8 @@ function BookingDialog({ onClose, slots, lessonType }) {
             </button>
           </div>
         ) : (
-          <>
+          <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_300px] md:gap-10">
+          <div className="order-2 md:order-1">
             <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-[#087c81]">
               Stúdió bérlés
             </p>
@@ -339,12 +344,6 @@ function BookingDialog({ onClose, slots, lessonType }) {
                   Nemzetközi formátum, országkóddal (például +36).
                 </p>
               </div>
-              <div className="flex items-center justify-between gap-3 border-t border-gray-200 pt-4">
-                <span className="text-sm font-bold text-gray-700">Összesen</span>
-                <span className="text-lg font-extrabold text-[#087c81]">
-                  {huCurrency.format(totalPrice)}
-                </span>
-              </div>
               {submitError && (
                 <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800">
                   {submitError}
@@ -362,7 +361,42 @@ function BookingDialog({ onClose, slots, lessonType }) {
                 stúdiónak a foglalási igény feldolgozásához.
               </p>
             </form>
-          </>
+          </div>
+
+          {/* Jobb oldalt: a kiválasztott időpontok és termek összesítője */}
+          <aside
+            aria-label="Kiválasztott időpontok"
+            className="order-1 flex flex-col rounded-3xl bg-[#40CFD5]/10 p-5 ring-1 ring-[#40CFD5]/40 mt-8 md:order-2 md:mt-10 md:self-start"
+          >
+            <p className="text-[11px] font-extrabold uppercase tracking-widest text-[#087c81]">
+              Kiválasztott időpontok ({slots.length})
+            </p>
+            <ul className="mt-3 max-h-[min(340px,40vh)] space-y-2 overflow-y-auto overscroll-contain pr-1">
+              {sortedSlots.map((slot) => (
+                <li
+                  key={`${slot.room}-${slot.date}-${slot.hour}`}
+                  className="rounded-2xl bg-white px-4 py-3 shadow-sm"
+                >
+                  <p className="text-sm font-extrabold text-black">{slot.room}</p>
+                  <div className="mt-1 flex items-baseline justify-between gap-3">
+                    <span className="text-xs font-semibold text-gray-600">
+                      {huDate.format(new Date(`${slot.date}T00:00:00`))}
+                      <br />
+                      {formatHour(slot.hour)}–{formatHour(endHour(slot))}
+                    </span>
+                    <span className="shrink-0 text-sm font-extrabold text-[#087c81]">
+                      {huCurrency.format(bookingPrice(slot))}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 flex items-center justify-between gap-3 border-t border-[#40CFD5]/40 pt-4">
+              <span className="text-sm font-bold text-black">Összesen</span>
+              <span className="text-xl font-extrabold text-[#087c81]">{huCurrency.format(totalPrice)}</span>
+            </div>
+          </aside>
+          </div>
         )}
       </section>
     </div>,
@@ -422,6 +456,22 @@ function StudioCalendar({ lessonType, initialRoom, roomRequest }) {
   const [currentTime, setCurrentTime] = useState(() => new Date());
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
   const [bookingSlots, setBookingSlots] = useState([]);
+  // Az alsó, fix összesítő magasságával megegyező térköz az oldal alján,
+  // hogy teljesen legörgetve se takarja el a láblécet.
+  const drawerRef = useRef(null);
+  const drawerOpen = selectedSlots.length > 0;
+  useEffect(() => {
+    const el = drawerRef.current;
+    if (!drawerOpen || !el) return;
+    const apply = () => { document.body.style.paddingBottom = `${el.offsetHeight}px`; };
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      document.body.style.paddingBottom = "";
+    };
+  }, [drawerOpen]);
 
   // A naptárhoz görgetünk, az aktuális időpont környékére (a képernyő közepére igazítva).
   const requestScrollToNow = () => {
@@ -705,35 +755,6 @@ function StudioCalendar({ lessonType, initialRoom, roomRequest }) {
         </label>
       </div>
 
-      <div className="mb-5 flex flex-col gap-4 rounded-2xl border border-gray-200 bg-[#f7f7f7] p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <Clock3 size={18} aria-hidden="true" className="shrink-0 text-[#087c81]" />
-          <p className="text-sm leading-relaxed text-gray-600">
-            Kattints egy szabad időpontra. A felső nyíllal fél órával korábbra
-            hozhatod a kezdést, az alsóval fél órával későbbre tolhatod a befejezést.
-            Minimum 1 óra foglalható. A kijelölt időszakra kattintva törölheted a kijelölést.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-4 text-xs font-semibold text-gray-600">
-          <span className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded bg-white ring-1 ring-gray-300" />
-            Szabad
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded bg-gray-300" />
-            Elmúlt időpont
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded bg-amber-200 ring-1 ring-amber-400" />
-            Igény elküldve, jóváhagyásra vár
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded bg-blue-100 ring-1 ring-blue-400" />
-            Foglalás alatt
-          </span>
-        </div>
-      </div>
-
       {/* Teremválasztó fülek (mint korábban) */}
       <div className="mb-5" role="tablist" aria-label="Válassz termet">
         {lessonType === "csoportos" && (
@@ -771,15 +792,46 @@ function StudioCalendar({ lessonType, initialRoom, roomRequest }) {
         aria-labelledby={`room-tab-${rooms.indexOf(activeRoom)}`}
         className="rounded-2xl border border-gray-200 bg-[#f7f7f7] p-3 sm:p-4"
       >
-        <div className={`mb-4 flex gap-2 ${
-          view === "day"
-            ? "flex-col items-center text-center"
-            : "flex-wrap items-center justify-between"
-        }`}>
-          <h3 className="text-lg font-extrabold text-black">{activeRoom}</h3>
-          <span className="rounded-full bg-[#40CFD5]/20 px-3 py-1 text-xs font-bold text-[#087c81]">
-            {view === "day" ? "Napi foglaltság" : view === "week" ? "Heti foglaltság" : "Havi foglaltság"}
-          </span>
+        {/* Terem neve + kompakt súgó és jelmagyarázat (a korábbi „Heti foglaltság” címke helyén) */}
+        <div className="mb-4 flex flex-col gap-x-6 gap-y-2.5 lg:flex-row lg:items-center lg:justify-between">
+          <h3 className="shrink-0 text-lg font-extrabold text-black">{activeRoom}</h3>
+          <div className="flex flex-col gap-x-5 gap-y-1.5 text-xs text-gray-600 xl:flex-row xl:items-center">
+            <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5" aria-label="Használat">
+              <li className="flex items-center gap-1.5">
+                <MousePointerClick size={14} aria-hidden="true" className="text-[#087c81]" />
+                Kattints egy szabad sávra
+              </li>
+              <li className="flex items-center gap-1.5">
+                <span className="flex" aria-hidden="true">
+                  <ChevronUp size={14} className="text-[#087c81]" />
+                  <ChevronDown size={14} className="-ml-1 text-[#087c81]" />
+                </span>
+                ±&nbsp;fél óra a nyilakkal
+              </li>
+              <li className="flex items-center gap-1.5">
+                <Clock3 size={14} aria-hidden="true" className="text-[#087c81]" />
+                Min. 1 óra
+              </li>
+            </ul>
+            <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5 font-semibold" aria-label="Jelmagyarázat">
+              <li className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded bg-white ring-1 ring-gray-300" />
+                Szabad
+              </li>
+              <li className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded bg-gray-300" />
+                Elmúlt
+              </li>
+              <li className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded bg-amber-200 ring-1 ring-amber-400" />
+                Jóváhagyásra vár
+              </li>
+              <li className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded bg-blue-100 ring-1 ring-blue-400" />
+                Foglalt
+              </li>
+            </ul>
+          </div>
         </div>
 
       {view === "day" && (
@@ -913,9 +965,10 @@ function StudioCalendar({ lessonType, initialRoom, roomRequest }) {
         A foglalások állapota 10 másodpercenként frissül.
       </p>
     </motion.section>
-    {/* A fix összesítő az animált szakaszon kívül marad, így a képernyő aljához rögzül. */}
-    {selectedSlots.length > 0 && (
+    {/* A fix összesítő portállal a <body>-ba kerül, így semmilyen szekció (pl. a lábléc) nem takarja el. */}
+    {selectedSlots.length > 0 && createPortal(
       <div
+        ref={drawerRef}
         role="status"
         aria-live="polite"
         className="fixed inset-x-0 bottom-0 z-[60] border-t border-[#40CFD5]/60 bg-white/95 shadow-[0_-8px_30px_rgba(0,0,0,0.14)] backdrop-blur-md"
@@ -1012,7 +1065,8 @@ function StudioCalendar({ lessonType, initialRoom, roomRequest }) {
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body,
     )}
     {bookingDialogOpen && (
       <BookingDialog

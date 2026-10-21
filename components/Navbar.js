@@ -23,7 +23,9 @@ export default function Navbar() {
 
   useEffect(() => {
     if (pathname !== "/") {
-      setActiveHref(navLinks.some((link) => link.href === pathname) ? pathname : "");
+      setActiveHref(
+        navLinks.some((link) => link.href === pathname) ? pathname : "",
+      );
       return;
     }
 
@@ -63,7 +65,8 @@ export default function Navbar() {
 
     const target = document.querySelector(href);
     if (target) {
-      const top = target.getBoundingClientRect().top + window.scrollY - NAV_OFFSET;
+      const top =
+        target.getBoundingClientRect().top + window.scrollY - NAV_OFFSET;
       window.scrollTo({ top, behavior: "smooth" });
     }
     setActiveHref(href);
@@ -88,9 +91,10 @@ export default function Navbar() {
         }}
       >
         {/*
-          Fade: külön, abszolút pozicionált réteg, ami a navbarnál
-          magasabb (alánk is belóg), nem kattintható (pointer-events: none),
+          Fade: külön, abszolút pozicionált réteg, pontosan a fejléc
+          magasságában, nem kattintható (pointer-events: none),
           és a nav tartalma (logó, linkek) mögött, de a lap háttere előtt van.
+          Diszkrét blur is van rajta, ami lefelé a fade-del együtt elhalványul.
         */}
         <div
           aria-hidden="true"
@@ -104,6 +108,11 @@ export default function Navbar() {
             pointerEvents: "none",
             background:
               "linear-gradient(to bottom, rgba(255,255,255,0.8) 0%, transparent 100%)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            maskImage: "linear-gradient(to bottom, #000 55%, transparent 100%)",
+            WebkitMaskImage:
+              "linear-gradient(to bottom, #000 55%, transparent 100%)",
           }}
         />
 
@@ -162,11 +171,13 @@ export default function Navbar() {
                   key={link.href}
                   href={href}
                   onClick={(e) => handleNavClick(e, link.href)}
+                  aria-current={isActive ? "page" : undefined}
                   style={{
                     fontFamily: "var(--font-inter), Inter, sans-serif",
                     fontSize: 16,
                     fontWeight: 700,
-                    color: isActive ? "#ffffff" : "#111111",
+                    // Aktív menüpont: türkiz (primary) szöveg
+                    color: isActive ? "#40CFD5" : "#111111",
                     textDecoration: "none",
                     padding: "0 28px",
                     whiteSpace: "nowrap",
