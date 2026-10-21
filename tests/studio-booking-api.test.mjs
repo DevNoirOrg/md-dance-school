@@ -23,7 +23,7 @@ const input = (hour = 14) => ({
   slots: [
     { room: "Astoria - Nagy Terem", date: "2099-10-15", hour },
     { room: "Astoria - Kis Terem", date: "2099-10-15", hour },
-    { room: "Opera - Kis Terem", date: "2099-10-15", hour },
+    { room: "Opera - Közepes Terem", date: "2099-10-15", hour },
   ],
 });
 const request = (body) => new Request("http://localhost/api/studio-bookings", {
