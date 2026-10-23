@@ -131,4 +131,19 @@ revoke all on function public.decide_studio_request(text, text, uuid) from publi
 grant execute on function public.create_studio_request(jsonb, text, text, jsonb) to service_role;
 grant execute on function public.decide_studio_request(text, text, uuid) to service_role;
 
+create or replace function public.create_admin_studio_request(
+  p_customer jsonb, p_lesson_type text, p_token_hash text, p_slots jsonb
+)
+returns jsonb language plpgsql security invoker set search_path = public as $$
+declare
+  result jsonb;
+begin
+  result := create_studio_request(p_customer, p_lesson_type, p_token_hash, p_slots);
+  perform decide_studio_request(p_token_hash, 'approve-all', null);
+  return jsonb_build_object('id', result->'id');
+end;
+$$;
+revoke all on function public.create_admin_studio_request(jsonb, text, text, jsonb) from public, anon, authenticated;
+grant execute on function public.create_admin_studio_request(jsonb, text, text, jsonb) to service_role;
+
 commit;

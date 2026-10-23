@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { validateBooking, emailPattern, overlaps, formatBookingHour } from "../lib/studio-booking.js";
+import { validateBooking, emailPattern, overlaps, formatBookingHour, canRescheduleBooking } from "../lib/studio-booking.js";
 import { buildBookingEmail } from "../lib/booking-email.js";
 
 const now = new Date("2026-10-14T10:00:00Z");
@@ -87,6 +87,25 @@ test("half-hour starts and duration pricing respect minimum, closing and overlap
   assert.ok(validateBooking({ ...input, slots: [input.slots[0], { ...adjacent, hour: 11.5 }] }, now).error);
   const today = { ...input.slots[0], date: "2026-10-14", hour: 12.5 };
   assert.ok(validateBooking({ ...input, slots: [today] }, now).booking);
+});
+
+test("calendar rescheduling checks the entire original duration and ignores only the original booking", () => {
+  const booking = { id: "original", room: "Opera - Közepes Terem", date: "2026-10-15", hour: 10, durationMinutes: 90 };
+  const occupied = { ...booking, id: "other", hour: 14 };
+  const slots = [booking, occupied];
+  const target = { ...booking, hour: 10.5 };
+  assert.equal(canRescheduleBooking(booking, target, slots, now), true);
+  assert.equal(canRescheduleBooking(booking, { ...target, hour: 12.5 }, slots, now), true);
+  assert.equal(canRescheduleBooking(booking, { ...target, hour: 13 }, slots, now), false);
+  assert.equal(canRescheduleBooking(booking, { ...target, hour: 14.5 }, slots, now), false);
+  assert.equal(canRescheduleBooking(booking, { ...target, hour: 15.5 }, slots, now), true);
+  assert.equal(canRescheduleBooking(booking, { ...target, hour: 20.5 }, slots, now), true);
+  for (const change of [
+    { room: "Astoria - Nagy Terem" }, { durationMinutes: 60 }, { hour: 21 },
+    { hour: 7.5 }, { hour: 10.25 }, { date: "2026-10-13" }, { date: "2026-02-30" },
+  ]) assert.equal(canRescheduleBooking(booking, { ...target, ...change }, slots, now), false);
+  assert.equal(canRescheduleBooking(booking, { ...target, date: "2026-10-16", hour: 14 }, slots, now), true);
+  assert.equal(canRescheduleBooking(booking, target, [...slots, { ...target, id: "new-conflict" }], now), false);
 });
 
 test("previously demo-occupied slots pass validation for all rooms and hours", () => {
