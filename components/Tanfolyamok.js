@@ -231,7 +231,7 @@ export default function Tanfolyamok() {
           </a>
           <a
             href="#orarend"
-            className="w-full rounded-xl border-2 border-black px-7 py-[14px] text-center text-sm font-extrabold uppercase tracking-widest text-black transition-colors hover:border-[#40CFD5] hover:bg-[#40CFD5] sm:w-auto"
+            className="w-full rounded-xl border-[3px] border-black px-7 py-[13px] text-center text-sm font-extrabold uppercase tracking-widest text-black transition-colors hover:border-[#40CFD5] hover:bg-[#40CFD5] sm:w-auto"
           >
             Vissza az órarendhez
           </a>

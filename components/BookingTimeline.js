@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { canRescheduleBooking, endHour, formatBookingHour, overlaps } from "@/lib/studio-booking";
 
@@ -28,6 +28,51 @@ export default function BookingTimeline({
     height: (endHour(slot) - slot.hour) * 2 * rowHeight,
   });
   const rangeLabel = (slot) => `${formatBookingHour(slot.hour)}–${formatBookingHour(endHour(slot))}`;
+
+  // ── Húzható nyilak: a kezdés (felső nyíl) és a befejezés (alsó nyíl) fél órás lépésekben húzható.
+  // Húzás közben csak egy előnézet látszik; elengedéskor egyszer hívjuk az onResize-t.
+  // Foglalt sávnál, a nap szélénél vagy a múltnál megáll. Sima kattintás: ±fél óra, mint eddig.
+  const [drag, setDrag] = useState(null); // { edge, startY, origin, candidate }
+  const dragMoved = useRef(false);
+  const candidateFor = (edge, origin, steps) => {
+    let best = origin;
+    const dir = Math.sign(steps);
+    for (let k = dir; Math.abs(k) <= Math.abs(steps); k += dir) {
+      const duration = (origin.durationMinutes ?? 60) + (edge === "bottom" ? k : -k) * 30;
+      const next = edge === "bottom"
+        ? { ...origin, durationMinutes: duration }
+        : { ...origin, hour: origin.hour + k * 0.5, durationMinutes: duration };
+      if (duration < 60 || !allowed(next, origin)) break;
+      best = next;
+    }
+    return best;
+  };
+  const dragHandlers = (edge, slot) => ({
+    onPointerDown: (event) => {
+      if (event.button !== 0 && event.pointerType === "mouse") return;
+      dragMoved.current = false;
+      try { event.currentTarget.setPointerCapture(event.pointerId); } catch {}
+      setDrag({ edge, startY: event.clientY, origin: slot, candidate: slot });
+    },
+    onPointerMove: (event) => {
+      if (!drag || drag.edge !== edge || !sameStart(drag.origin, slot)) return;
+      const dy = event.clientY - drag.startY;
+      if (Math.abs(dy) > 4) dragMoved.current = true;
+      const steps = Math.round(dy / rowHeight);
+      const candidate = steps === 0 ? drag.origin : candidateFor(edge, drag.origin, steps);
+      if (candidate !== drag.candidate) setDrag({ ...drag, candidate });
+    },
+    onPointerUp: () => {
+      if (!drag) return;
+      const { origin, candidate } = drag;
+      setDrag(null);
+      if (dragMoved.current && (candidate.hour !== origin.hour || candidate.durationMinutes !== origin.durationMinutes)) {
+        onResize(origin, candidate);
+      }
+    },
+    onPointerCancel: () => setDrag(null),
+    style: { touchAction: "none", cursor: "ns-resize" },
+  });
 
   return (
     <div data-timeline-date={date}
@@ -111,21 +156,35 @@ export default function BookingTimeline({
           )}
           <button type="button"
             aria-label={`${room}, ${date}, ${rangeLabel(slot)} kezdése fél órával korábban`}
-            title="Kezdés fél órával korábban"
-            disabled={!allowed(earlier, slot)}
-            onClick={() => { if (allowed(earlier, slot)) onResize(slot, earlier); }}
+            title="Kezdés fél órával korábban — vagy húzd fel/le"
+            disabled={!allowed(earlier, slot) && slot.durationMinutes <= 60}
+            {...dragHandlers("top", slot)}
+            onClick={() => {
+              if (dragMoved.current) { dragMoved.current = false; return; }
+              if (allowed(earlier, slot)) onResize(slot, earlier);
+            }}
             className="absolute left-1/2 top-0 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded bg-white/70 hover:bg-white disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-black"
           ><ChevronUp size={20} aria-hidden="true" /></button>
           <button type="button"
             aria-label={`${room}, ${date}, ${rangeLabel(slot)} befejezése fél órával később`}
-            title="Befejezés fél órával később"
-            disabled={!allowed(later, slot)}
-            onClick={() => { if (allowed(later, slot)) onResize(slot, later); }}
+            title="Befejezés fél órával később — vagy húzd fel/le"
+            disabled={!allowed(later, slot) && slot.durationMinutes <= 60}
+            {...dragHandlers("bottom", slot)}
+            onClick={() => {
+              if (dragMoved.current) { dragMoved.current = false; return; }
+              if (allowed(later, slot)) onResize(slot, later);
+            }}
             className="absolute bottom-0 left-1/2 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded bg-white/70 hover:bg-white disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-black"
           ><ChevronDown size={20} aria-hidden="true" /></button>
         </div>
         );
       })}
+      {drag && drag.origin.date === date && drag.origin.room === room && (
+        <div data-drag-preview aria-hidden="true" style={styleFor(drag.candidate)}
+          className="pointer-events-none absolute inset-x-0 z-[35] flex items-center justify-center border-2 border-dashed border-[#087c81] bg-[#40CFD5]/35 text-[11px] font-extrabold text-[#065f63]">
+          {rangeLabel(drag.candidate)}
+        </div>
+      )}
       {preview && preview.date === date && preview.room === room && (reschedulingBooking || allowed(preview)) && (
         <div data-booking-preview data-available={allowed(preview)}
           style={{ ...styleFor(preview), ...(reschedulingBooking ? { maxHeight: (22 - preview.hour) * 2 * rowHeight } : {}) }}

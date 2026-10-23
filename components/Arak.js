@@ -25,12 +25,12 @@ export default function Arak() {
       initial={{ opacity: 0, y: 30 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.7, delay: 0.15 }}
-      className="relative rounded-[2.5rem] bg-[#40CFD5] px-6 pb-8 pt-16 shadow-2xl sm:px-8 sm:pt-20 lg:sticky lg:top-28"
+      className="relative rounded-[2.5rem] bg-[#40CFD5] px-6 pb-8 pt-16 shadow-2xl sm:px-8 sm:pt-20"
     >
-      {/* Cím — kilóg a kártya tetejéből, mint a JELENTKEZÉS */}
+      {/* Cím — kilóg a kártya tetejéből, mint a JELENTKEZÉS, de türkiz körvonallal (a kártya színe) */}
       <h2
         className="section-title absolute left-6 sm:left-8 text-4xl sm:text-5xl leading-none"
-        style={{ top: '-0.5em', color: '#000', WebkitTextStroke: '7px #fff', paintOrder: 'stroke' }}
+        style={{ top: '-0.5em', color: '#000', WebkitTextStroke: '7px #40CFD5', paintOrder: 'stroke' }}
       >
         ÁRAINK
       </h2>

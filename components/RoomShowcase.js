@@ -120,10 +120,11 @@ function RoomModal({ room, onClose, onBook }) {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 16, scale: 0.98 }}
         transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-        className="relative flex max-h-[92vh] w-full max-w-6xl flex-col-reverse overflow-hidden rounded-[2rem] bg-white shadow-2xl lg:grid lg:grid-cols-[380px_minmax(0,1fr)]"
+        className="relative flex h-[92vh] max-h-[860px] w-full max-w-6xl flex-col-reverse overflow-hidden rounded-[2rem] bg-white shadow-2xl lg:grid lg:grid-cols-[380px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]"
       >
         {/* Info-sáv */}
-        <div className="overflow-y-auto p-6 sm:p-8">
+        {/* min-h-0: a rács/flex elem nem nőhet a tartalmánál nagyobbra, így tényleg görgethető */}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-6 sm:p-8">
           <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#179da3]">{d.location}</p>
           <h2 id="room-modal-title" className="section-title mt-1 text-4xl text-black">{d.name}</h2>
           <p className="mt-3 text-[15px] leading-relaxed text-gray-600">{d.description}</p>

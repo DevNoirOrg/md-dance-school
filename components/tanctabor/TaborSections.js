@@ -70,50 +70,83 @@ function SubTitle({ children, className = '' }) {
    1) Fejléc — a Stúdió bérlés oldal mintájára
    ────────────────────────────────────────────────────────────── */
 
+// A tábor álló (9:16) reel-videója. Amíg nincs, helyőrző jelenik meg.
+// Ha megvan: tedd a fájlt a /public mappába (pl. /public/tabor-reel.mp4), és írd ide az útvonalát.
+const TABOR_REEL_SRC = null
+
 export function TaborHero() {
   return (
     <section
-      className="relative flex min-h-[440px] items-center justify-center bg-black px-5 pb-24 pt-32 text-center sm:min-h-[500px] sm:pt-36"
-      style={{
-        backgroundImage:
-          "linear-gradient(0deg, rgba(0,0,0,0.76), rgba(0,0,0,0.48)), url('/canva/hero-crowd.jpg')",
-        backgroundPosition: 'center 42%',
-        backgroundSize: 'cover',
-        overflowX: 'clip',
-      }}
+      className="relative overflow-hidden bg-black px-5 pb-28 pt-32 sm:pt-36 lg:pb-32"
+      style={{ overflowX: 'clip' }}
     >
+      {/* Halvány háttérkép + sötét átmenet (mint az UC hero) */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-cover opacity-35"
+        style={{ backgroundImage: "url('/canva/hero-crowd.jpg')", backgroundPosition: 'center 42%' }}
+      />
+      <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-black via-black/85 to-black/40" />
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-white to-transparent"
       />
       <HalftoneDots size={240} zIndex={1} style={{ bottom: -70, left: -90 }} />
 
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.65 }}
-        className="relative z-10 max-w-4xl"
-      >
-        <p className="mb-4 text-xs font-bold uppercase tracking-[0.3em] text-[#40CFD5] sm:text-sm">
-          MD Dance School · Nyári tábor
-        </p>
-        <h1 className="section-title text-5xl text-white sm:text-7xl md:text-8xl">TÁNCTÁBOR 2026</h1>
-        <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-white/90 sm:text-lg">
-          4 nap tánc, wellness, sport és közösség a Szigetszentmiklósi Oázis Wellness Parkban.
-        </p>
-        <div className="mt-7 flex flex-wrap justify-center gap-2.5">
-          {turnusok.map((t) => (
-            <span
-              key={t.id}
-              className={`rounded-full px-4 py-2 text-xs sm:text-sm font-bold ${
-                t.closed ? 'bg-white/10 text-white/60 line-through decoration-white/40' : 'bg-[#40CFD5] text-black'
-              }`}
+      <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-16">
+        {/* ── Bal oszlop: kedvcsináló szöveg + gombok ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.65 }}
+          className="text-center lg:text-left"
+        >
+          <span className="inline-block rounded-full border border-white/20 bg-white/10 px-5 py-2 text-[11px] font-bold uppercase tracking-[0.25em] text-[#40CFD5]">
+            MD Dance School · Nyári tábor
+          </span>
+          <h1 className="section-title mt-6 text-5xl text-white sm:text-7xl md:text-8xl">TÁNCTÁBOR 2026</h1>
+          <p className="mx-auto mt-6 max-w-xl text-lg font-semibold leading-relaxed text-white/90 lg:mx-0">
+            Négy nap, ami csak a táncról szól: reggeltől estig órák az MD tanáraival, közben strand, wellness, sport
+            és esti programok egy szuper csapattal.
+          </p>
+          <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed text-white/65 lg:mx-0">
+            Kezdőként és haladóként is megtalálod a helyed — gyere, és éld át velünk az MD életérzést a
+            Szigetszentmiklósi Oázis Wellness Parkban!
+          </p>
+          <div className="mt-9 flex flex-wrap justify-center gap-4 lg:justify-start">
+            <a
+              href="#jelentkezes"
+              className="rounded-full bg-[#40CFD5] px-10 py-4 text-sm font-extrabold uppercase tracking-[0.2em] text-black shadow-xl transition-all hover:-translate-y-0.5 hover:bg-white"
             >
-              {t.label} · {t.dates}
-            </span>
-          ))}
-        </div>
-      </motion.div>
+              Jelentkezem
+            </a>
+            <a
+              href="#info"
+              className="rounded-full border border-white/40 px-10 py-4 text-sm font-extrabold uppercase tracking-[0.2em] text-white transition-colors hover:bg-white/10"
+            >
+              Árak és időpontok
+            </a>
+          </div>
+        </motion.div>
+
+        {/* ── Jobb oszlop: álló reel-videó (vagy helyőrző) ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.65, delay: 0.15 }}
+          className="justify-self-center lg:justify-self-end"
+        >
+          <div className="relative aspect-[9/16] w-[min(72vw,300px)] overflow-hidden rounded-[2rem] bg-black/60 backdrop-blur-sm sm:w-[min(60vw,320px)] lg:w-[340px]">
+            {TABOR_REEL_SRC ? (
+              <video className="absolute inset-0 h-full w-full object-cover" src={TABOR_REEL_SRC} autoPlay muted loop playsInline />
+            ) : (
+              <div className="absolute inset-0 grid place-items-center rounded-[2rem] border border-dashed border-white/25">
+                <span className="text-xs font-bold uppercase tracking-[0.3em] text-white/50">Álló videó</span>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
     </section>
   )
 }
@@ -124,7 +157,7 @@ export function TaborHero() {
 
 export function TaborInfo() {
   return (
-    <section className="relative z-20 px-4 pb-20 sm:pb-28" style={{ overflowX: 'clip' }}>
+    <section id="info" className="relative z-20 scroll-mt-24 px-4 pb-20 sm:pb-28" style={{ overflowX: 'clip' }}>
       <HalftoneDots size={260} zIndex={0} style={{ bottom: 40, right: -130 }} />
 
       <FadeIn className="relative z-10 mx-auto -mt-12 max-w-7xl">

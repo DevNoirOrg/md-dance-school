@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   CalendarDays,
   Check,
@@ -15,6 +15,7 @@ import {
   UserRound,
   UsersRound,
   MousePointerClick,
+  Plus,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import UserRoundGroup from "@/components/icons/UserRoundGroup";
@@ -22,7 +23,8 @@ import Footer from "@/components/Footer";
 import BookingTimeline from "@/components/BookingTimeline";
 import HalftoneDots from "@/components/HalftoneDots";
 import RoomShowcase from "@/components/RoomShowcase";
-import { rooms, emailPattern, bookingPrice, endHour, overlaps, formatBookingHour } from "@/lib/studio-booking";
+import ConsentChecks, { emptyConsents } from "@/components/ConsentChecks";
+import { validateBookingTime, rooms, emailPattern, bookingPrice, endHour, overlaps, formatBookingHour } from "@/lib/studio-booking";
 
 const lessonTypes = [
   {
@@ -132,6 +134,8 @@ function BookingDialog({ onClose, slots, lessonType }) {
   const [sending, setSending] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const sendingRef = useRef(false);
+  const [consents, setConsents] = useState(emptyConsents);
+  const [consentTried, setConsentTried] = useState(false);
   const totalPrice = slots.reduce((total, slot) => total + bookingPrice(slot), 0);
   const sortedSlots = [...slots].sort((a, b) =>
     a.date.localeCompare(b.date) || a.hour - b.hour || a.room.localeCompare(b.room),
@@ -166,6 +170,11 @@ function BookingDialog({ onClose, slots, lessonType }) {
     );
 
     if (!form.reportValidity()) return;
+    setConsentTried(true);
+    if (!consents.tajekoztato || !consents.adatkezeles) {
+      document.getElementById("booking-tajekoztato-row")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     sendingRef.current = true;
     setSending(true);
     setSubmitError("");
@@ -344,6 +353,12 @@ function BookingDialog({ onClose, slots, lessonType }) {
                   Nemzetközi formátum, országkóddal (például +36).
                 </p>
               </div>
+              <ConsentChecks
+                idPrefix="booking"
+                values={consents}
+                showErrors={consentTried}
+                onChange={(k, v) => setConsents((p) => ({ ...p, [k]: v }))}
+              />
               {submitError && (
                 <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800">
                   {submitError}
@@ -456,6 +471,14 @@ function StudioCalendar({ lessonType, initialRoom, roomRequest }) {
   const [currentTime, setCurrentTime] = useState(() => new Date());
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
   const [bookingSlots, setBookingSlots] = useState([]);
+  // „Ma” gomb: animált váltás + a mai nap rövid felvillanása
+  const [todayFlash, setTodayFlash] = useState(0);
+  const slideDir = useRef(0);
+  // Időpont beírása számokkal (dátum + kezdés + vége) az aktív teremre
+  const [manualDate, setManualDate] = useState(() => dateKey(new Date()));
+  const [manualStart, setManualStart] = useState("");
+  const [manualEnd, setManualEnd] = useState("");
+  const [manualError, setManualError] = useState("");
   // Az alsó, fix összesítő magasságával megegyező térköz az oldal alján,
   // hogy teljesen legörgetve se takarja el a láblécet.
   const drawerRef = useRef(null);
@@ -487,7 +510,7 @@ function StudioCalendar({ lessonType, initialRoom, roomRequest }) {
   useEffect(() => {
     if (!roomRequest) return;
     if (availableRooms.includes(roomRequest.room)) setActiveRoom(roomRequest.room);
-    requestScrollToNow();
+    if (roomRequest.scroll !== false) requestScrollToNow();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomRequest?.id]);
 
@@ -575,6 +598,7 @@ function StudioCalendar({ lessonType, initialRoom, roomRequest }) {
 
   // Az előző/következő gomb az aktív nézet szerint napot, hetet vagy hónapot léptet.
   const navigateDate = (direction) => {
+    slideDir.current = direction;
     setSelectedDate((current) => {
       if (view === "month") {
         return new Date(
@@ -645,6 +669,62 @@ function StudioCalendar({ lessonType, initialRoom, roomRequest }) {
     setBookingDialogOpen(false);
     setRefreshVersion((current) => current + 1);
   };
+  // „13:00–20:00” típusú beírás → kijelölés az aktív teremben
+  const parseTime = (value) => {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+    if (!m) return null;
+    const h = Number(m[1]);
+    const min = Number(m[2]);
+    if (min !== 0 && min !== 30) return NaN;
+    return h + min / 60;
+  };
+  const addManualSlot = (event) => {
+    event.preventDefault();
+    setManualError("");
+    const start = parseTime(manualStart);
+    const end = parseTime(manualEnd);
+    if (!manualDate || start === null || end === null) {
+      setManualError("Add meg a dátumot, a kezdést és a befejezést (pl. 13:00 és 20:00).");
+      return;
+    }
+    if (Number.isNaN(start) || Number.isNaN(end)) {
+      setManualError("Csak egész vagy fél órák választhatók (pl. 13:00 vagy 13:30).");
+      return;
+    }
+    const durationMinutes = Math.round((end - start) * 60);
+    if (start < 8 || end > 22) {
+      setManualError("A stúdió 8:00 és 22:00 között foglalható.");
+      return;
+    }
+    if (durationMinutes < 60) {
+      setManualError("Legalább 1 órát kell foglalni, és a befejezés legyen a kezdés után.");
+      return;
+    }
+    const slot = { room: activeRoom, date: manualDate, hour: start, durationMinutes };
+    const timeError = validateBookingTime(slot, new Date());
+    if (timeError) {
+      setManualError(timeError);
+      return;
+    }
+    if (!availabilityReady) {
+      setManualError("A foglaltság még töltődik, próbáld újra egy pillanat múlva.");
+      return;
+    }
+    if (storedSlots.some((saved) => overlaps(slot, saved))) {
+      setManualError("Ez az időszak (vagy egy része) már foglalt ebben a teremben. Válassz másik időpontot.");
+      return;
+    }
+    if (selectedSlots.some((sel) => overlaps(slot, sel))) {
+      setManualError("Ez az időszak átfed egy már kijelölt időponttal.");
+      return;
+    }
+    setSelectedSlots((current) => [...current, slot]);
+    setSelectedDate(startOfDay(new Date(`${manualDate}T00:00:00`)));
+    setScrollRequest({ hour: start, at: Date.now() });
+    setManualStart("");
+    setManualEnd("");
+  };
+
   const visibleWeekDays = Array.from({ length: 7 }, (_, index) =>
     addDays(getWeekStart(selectedDate), index),
   );
@@ -678,7 +758,8 @@ function StudioCalendar({ lessonType, initialRoom, roomRequest }) {
       )}
       <div className="mb-5 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="section-title text-3xl text-black sm:text-4xl">
+          <p className="text-xs font-extrabold uppercase tracking-[0.25em] text-[#087c81]">2. lépés</p>
+          <h2 className="section-title mt-1 text-3xl text-black sm:text-4xl">
             Válassz időpontot
           </h2>
           <p className="mt-2 text-sm text-gray-600">
@@ -706,7 +787,11 @@ function StudioCalendar({ lessonType, initialRoom, roomRequest }) {
           <button
             type="button"
             onClick={() => {
-              setSelectedDate(startOfDay(new Date()));
+              const today = startOfDay(new Date());
+              slideDir.current = today < selectedDate ? -1 : today > selectedDate ? 1 : 0;
+              setSelectedDate(today);
+              setTodayFlash(Date.now());
+              requestScrollToNow();
             }}
             className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-bold text-black transition-colors hover:border-[#40CFD5]"
           >
@@ -747,13 +832,56 @@ function StudioCalendar({ lessonType, initialRoom, roomRequest }) {
             min={dateKey(new Date())}
             onChange={(event) => {
               if (event.target.value) {
-                setSelectedDate(startOfDay(new Date(`${event.target.value}T00:00:00`)));
+                const next = startOfDay(new Date(`${event.target.value}T00:00:00`));
+                slideDir.current = next < selectedDate ? -1 : 1;
+                setSelectedDate(next);
               }
             }}
             className="rounded-lg border border-gray-200 bg-white px-2 py-2 text-sm text-black"
           />
         </label>
       </div>
+
+      {/* Időpont beírása számokkal — az aktív terem fülére vonatkozik */}
+      <form onSubmit={addManualSlot} noValidate
+        className="mb-5 rounded-2xl border border-gray-200 p-3 sm:p-4" aria-label="Időpont megadása számokkal">
+        <div className="flex flex-wrap items-end gap-3">
+          <p className="w-full text-xs font-extrabold uppercase tracking-widest text-gray-500 lg:w-auto lg:self-center lg:pr-2">
+            Vagy írd be:
+          </p>
+          <label className="flex flex-col gap-1 text-[11px] font-extrabold uppercase tracking-widest text-gray-400">
+            Dátum
+            <input type="date" value={manualDate} min={dateKey(new Date())}
+              onChange={(e) => setManualDate(e.target.value)}
+              className="rounded-lg border border-gray-200 bg-white px-2 py-2 text-sm font-semibold normal-case tracking-normal text-black" />
+          </label>
+          <label className="flex flex-col gap-1 text-[11px] font-extrabold uppercase tracking-widest text-gray-400">
+            Kezdés
+            <input type="text" inputMode="numeric" placeholder="13:00" value={manualStart} maxLength={5}
+              onChange={(e) => setManualStart(e.target.value)}
+              className="w-24 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold tracking-normal text-black placeholder:text-gray-300" />
+          </label>
+          <span className="pb-2 font-bold text-gray-400" aria-hidden="true">–</span>
+          <label className="flex flex-col gap-1 text-[11px] font-extrabold uppercase tracking-widest text-gray-400">
+            Vége
+            <input type="text" inputMode="numeric" placeholder="20:00" value={manualEnd} maxLength={5}
+              onChange={(e) => setManualEnd(e.target.value)}
+              className="w-24 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold tracking-normal text-black placeholder:text-gray-300" />
+          </label>
+          <button type="submit"
+            className="flex items-center gap-1.5 rounded-lg bg-black px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#40CFD5] hover:text-black">
+            <Plus size={16} strokeWidth={2.5} aria-hidden="true" /> Hozzáadás
+          </button>
+          <p className="text-xs text-gray-500 lg:ml-auto lg:self-center">
+            Terem: <strong className="text-black">{activeRoom}</strong>
+          </p>
+        </div>
+        {manualError && (
+          <p role="alert" className="mt-3 rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-800">
+            {manualError}
+          </p>
+        )}
+      </form>
 
       {/* Teremválasztó fülek (mint korábban) */}
       <div className="mb-5" role="tablist" aria-label="Válassz termet">
@@ -834,8 +962,37 @@ function StudioCalendar({ lessonType, initialRoom, roomRequest }) {
           </div>
         </div>
 
+      {/* Időszak-váltáskor (lapozás, „Ma”) a naptár becsúszik az új időszakra */}
+      <AnimatePresence mode="wait" initial={false} custom={slideDir.current}>
+      <motion.div
+        key={`${view}-${getCalendarTitle(view, selectedDate)}`}
+        custom={slideDir.current}
+        variants={{
+          enter: (d) => ({ opacity: 0, x: d * 60 }),
+          center: { opacity: 1, x: 0 },
+          exit: (d) => ({ opacity: 0, x: d * -60 }),
+        }}
+        initial="enter"
+        animate="center"
+        exit="exit"
+        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+      >
       {view === "day" && (
         <div className="mx-auto max-w-xl">
+          {/* A nézett nap még egyszer, az idősávok fölött */}
+          <div
+            key={`day-head-${todayFlash}`}
+            className={`flex min-h-[62px] flex-col items-center justify-center px-2 py-2 text-center ${
+              dateKey(selectedDate) === dateKey(new Date()) ? "bg-[#40CFD5] text-black" : "bg-black text-white"
+            } ${todayFlash && dateKey(selectedDate) === dateKey(new Date()) ? "md-today-flash" : ""}`}
+          >
+            <span className="text-xs font-bold capitalize">
+              {new Intl.DateTimeFormat("hu-HU", { weekday: "long" }).format(selectedDate)}
+            </span>
+            <span className="text-lg font-extrabold">
+              {new Intl.DateTimeFormat("hu-HU", { year: "numeric", month: "long", day: "numeric" }).format(selectedDate)}
+            </span>
+          </div>
           <BookingTimeline
             room={activeRoom}
             date={dateKey(selectedDate)}
@@ -861,11 +1018,12 @@ function StudioCalendar({ lessonType, initialRoom, roomRequest }) {
                     setSelectedDate(date);
                     setView("day");
                   }}
+                  key={dateKey(date) === dateKey(new Date()) ? `today-${todayFlash}` : undefined}
                   className={`flex min-h-[62px] w-full flex-col items-center justify-center border-r border-white/20 px-2 py-2 text-center transition-colors ${
                     dateKey(date) === dateKey(selectedDate)
                       ? "bg-[#40CFD5] text-black"
                       : "bg-black text-white hover:bg-gray-800"
-                  }`}
+                  } ${todayFlash && dateKey(date) === dateKey(new Date()) ? "md-today-flash" : ""}`}
                 >
                   <span className="text-xs font-bold">
                     {new Intl.DateTimeFormat("hu-HU", {
@@ -903,6 +1061,7 @@ function StudioCalendar({ lessonType, initialRoom, roomRequest }) {
           ))}
           {monthDays.map((date) => {
             const inMonth = date.getMonth() === selectedDate.getMonth();
+            const isPastDay = dateKey(date) < dateKey(currentTime);
             const inProgressCount = approvedSlots.filter(
               (slot) => slot.room === activeRoom && slot.date === dateKey(date),
             ).length;
@@ -926,8 +1085,10 @@ function StudioCalendar({ lessonType, initialRoom, roomRequest }) {
                   setSelectedDate(date);
                   setView("day");
                 }}
-                aria-label={`${huDate.format(date)}, ${available} szabad idősáv`}
+                aria-label={`${huDate.format(date)}, ${isPastDay ? "elmúlt nap" : available > 0 ? "van szabad időpont" : "betelt"}`}
                 className={`flex min-h-[72px] flex-col items-center justify-center rounded-xl border text-sm transition-colors sm:min-h-[90px] ${
+                  todayFlash && dateKey(date) === dateKey(new Date()) ? "md-today-flash" : ""
+                } ${isPastDay && inMonth ? "opacity-60" : ""} ${
                   !inMonth
                     ? "border-transparent bg-gray-50 text-gray-300"
                     : dateKey(date) === dateKey(selectedDate)
@@ -936,10 +1097,12 @@ function StudioCalendar({ lessonType, initialRoom, roomRequest }) {
                 }`}
               >
                 <span className="font-bold">{date.getDate()}</span>
-                {inMonth && (
+                {inMonth && !isPastDay && (
                   <>
-                    <span className="mt-1 hidden text-[10px] text-gray-500 sm:block">
-                      {availabilityReady ? `${available} kezdés` : "Betöltés…"}
+                    <span className={`mt-1 text-[10px] font-bold sm:text-[11px] ${
+                      !availabilityReady ? "text-gray-400" : available > 0 ? "text-[#087c81]" : "text-gray-400"
+                    }`}>
+                      {!availabilityReady ? "…" : available > 0 ? "Van szabad" : "Betelt"}
                     </span>
                     <span className="mt-1 flex gap-1" aria-hidden="true">
                       {available > 0 && (
@@ -959,6 +1122,8 @@ function StudioCalendar({ lessonType, initialRoom, roomRequest }) {
           })}
         </div>
       )}
+      </motion.div>
+      </AnimatePresence>
       </div>
 
       <p className="mt-4 text-center text-xs text-gray-500">
@@ -1092,21 +1257,21 @@ export default function StudioBerlesPage() {
     );
   };
 
+  // A terem-modal „Foglalás” gombja: mindig az 1. lépéshez (óratípus) görget, és megjegyzi a termet.
   const bookRoom = (room) => {
     setPendingRoom(room);
+    scrollToLessonTypes();
     if (!selectedType) {
-      // Még nincs óratípus: előbb azt kell kiválasztani, utána a naptár ezzel a teremmel nyílik.
       setTypeHint(`Válaszd ki az óratípust, és megnyílik a(z) ${room} naptára.`);
-      scrollToLessonTypes();
       return;
     }
     if (selectedType === "csoportos" && room !== rooms[0]) {
       setTypeHint(`Csoportos órához csak az ${rooms[0]} választható — a(z) ${room} foglalásához válassz privát vagy kiscsoportos órát.`);
-      scrollToLessonTypes();
       return;
     }
-    setTypeHint("");
-    setRoomRequest({ room, id: Date.now() });
+    // Már van óratípus: a naptárban átváltunk a terem fülére (görgetés nélkül).
+    setTypeHint(`A naptárban a(z) ${room} fülét nyitottuk meg.`);
+    setRoomRequest({ room, id: Date.now(), scroll: false });
   };
 
   return (
@@ -1154,8 +1319,19 @@ export default function StudioBerlesPage() {
           {/* 4 terem kártyája — kattintásra részletes modal */}
           <RoomShowcase onBook={bookRoom} />
 
+          {/* Innen indul a foglalás */}
+          <div className="mb-10 flex items-center gap-4 sm:mb-12">
+            <div className="h-[2px] flex-1 bg-black/10" />
+            <p className="flex items-center gap-2 rounded-full bg-black px-5 py-2.5 text-xs font-extrabold uppercase tracking-[0.25em] text-white sm:text-sm">
+              <CalendarDays size={16} aria-hidden="true" className="text-[#40CFD5]" />
+              Kezdd meg a foglalást
+            </p>
+            <div className="h-[2px] flex-1 bg-black/10" />
+          </div>
+
           <div className="mb-8 text-center sm:mb-10">
-            <h2 id="lesson-type-title" className="section-title scroll-mt-32 text-4xl text-black sm:text-5xl">
+            <p className="text-xs font-extrabold uppercase tracking-[0.25em] text-[#087c81]">1. lépés</p>
+            <h2 id="lesson-type-title" className="section-title mt-1 scroll-mt-32 text-4xl text-black sm:text-5xl">
               Milyen órát tartanál?
             </h2>
             <p className="mt-3 text-sm text-gray-600 sm:text-base">

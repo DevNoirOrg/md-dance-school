@@ -13,7 +13,11 @@ const COMPANY_URL = 'https://www.mddancecompany.com/'
 const COMPANY_HOST = 'mddancecompany.com'
 // Teljes oldalas képernyőkép az MD Dance Company oldaláról (álló, hosszú kép).
 // A kép a /public mappában van; ha cseréled, elég ugyanezen a néven felülírni.
-const PREVIEW_SRC = '/mddancecompany-preview-2.jpg'
+// Az MD Dance Company oldal hero-videója (tömörítve, hang nélkül) + állókép a betöltésig,
+// és a logójuk — ezekből rakjuk össze az „igazi oldal” tetejét a laptopkeretben.
+const VIDEO_SRC = '/mdcompany-hero.mp4'
+const POSTER_SRC = '/mdcompany-hero-poster.jpg'
+const COMPANY_LOGO = '/mdcompany-logo.png'
 
 const highlights = ['Sport ceremóniák és nyitóshow-k', 'Élő show- és koncertprodukció', 'Koreográfia és art design']
 
@@ -89,14 +93,45 @@ export function CompanyPreview() {
             <ArrowUpRight className="h-5 w-5 shrink-0 text-white/40 transition-colors group-hover:text-[#40CFD5]" />
           </div>
 
-          {/* Az oldal képe — ráhúzott egérnél lassan végiggörget (globals.css: .company-preview-shot) */}
+          {/* Az MD Dance Company oldal teteje: hero-videó + az igazi oldal fejléce és felirata */}
           <div className="relative aspect-[4/3] w-full overflow-hidden bg-black sm:aspect-[16/10]">
-            <div
-              className="company-preview-shot absolute inset-0"
-              style={{ backgroundImage: `url('${PREVIEW_SRC}')` }}
-              role="img"
-              aria-label="Az MD Dance Company weboldala"
+            <video
+              className="absolute inset-0 h-full w-full object-cover"
+              src={VIDEO_SRC}
+              poster={POSTER_SRC}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              aria-hidden="true"
             />
+            <div aria-hidden="true" className="absolute inset-0 bg-black/40" />
+
+            {/* Fejléc: logó balra, „Contact us” jobbra (mint az éles oldalon) */}
+            <div aria-hidden="true" className="absolute inset-x-0 top-0 flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={COMPANY_LOGO} alt="" className="h-7 w-auto sm:h-10" />
+              <span className="rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm sm:px-7 sm:py-2 sm:text-sm">
+                Contact us
+              </span>
+            </div>
+
+            {/* Középen a felirat */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
+              <span className="mb-3 text-[9px] font-bold uppercase tracking-[0.5em] text-white/70 sm:mb-5 sm:text-xs">
+                MD Dance Company
+              </span>
+              <span
+                className="font-bold leading-[0.9] tracking-tighter text-white"
+                style={{ fontSize: 'clamp(28px, 6.2vw, 92px)', fontFamily: 'var(--font-inter), Inter, sans-serif' }}
+              >
+                We Turn Movement
+                <br />
+                Into Moments
+              </span>
+            </div>
+
             {/* Hover-felirat */}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-5 opacity-0 transition-opacity duration-300 group-hover:opacity-100 sm:p-7">
               <span className="flex items-center gap-2 rounded-full bg-[#40CFD5] px-5 py-2.5 text-xs font-extrabold uppercase tracking-widest text-black shadow-xl">

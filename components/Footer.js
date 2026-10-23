@@ -4,12 +4,16 @@ import { useRef } from 'react'
 import Image from 'next/image'
 import { Instagram, Facebook, Youtube } from 'lucide-react'
 import HalftoneDots from './HalftoneDots'
+import ContactForm from './ContactForm'
 
 export default function Footer() {
   const ref = useRef(null)
   const inView = useInView(ref, { once: true, margin: '-60px' })
 
   return (
+    <>
+    {/* „Írj nekünk” űrlap — minden oldalon a lábléc fölött */}
+    <ContactForm />
     <footer
       id="elerhetoseg"
       className="relative z-20 bg-white pt-16 pb-8 px-4"
@@ -93,10 +97,11 @@ export default function Footer() {
 
       {/* Jogi linkek — szétosztva a szélekre */}
       <div className="relative max-w-6xl mx-auto mt-14 flex flex-wrap justify-between gap-4 text-base sm:text-lg text-gray-600">
-        <a href="#" className="hover:text-black transition-colors">Adatkezelési tájékoztató</a>
+        <a href="/adatkezeles" className="hover:text-black transition-colors">Adatkezelési tájékoztató</a>
         <a href="#" className="hover:text-black transition-colors">ÁSZF</a>
         <a href="#" className="hover:text-black transition-colors">Cookie beállítások</a>
       </div>
     </footer>
+    </>
   )
 }

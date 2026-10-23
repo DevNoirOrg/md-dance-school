@@ -2,6 +2,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { turnusok } from './TaborSections'
+import { PRIVACY_URL as ADATKEZELESI_URL } from '@/lib/privacy'
 
 /*
   Tánctábor jelentkezési űrlap — a főoldali jelentkezés stílusában.
@@ -10,7 +11,6 @@ import { turnusok } from './TaborSections'
 */
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
-const ADATKEZELESI_URL = 'https://hiphoptanciskola.com/adatkezelesi-tajekoztato/'
 
 const poloMeretek = ['S', 'M', 'L', 'XL', '2XL', '3XL']
 const fizetesiModok = ['Készpénz vagy bankkártya MD-ben', 'Banki átutalás', 'MD App', 'Oneticket', 'SZÉP kártya']

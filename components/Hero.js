@@ -122,12 +122,17 @@ export default function Hero() {
           style={{
             margin: 0,
             textAlign: "center",
-            color: "#ffffff",
+            color: "#000000",
             fontWeight: 600,
             fontSize: "clamp(14px, 1.35vw, 22px)",
             lineHeight: 1.45,
-            textShadow:
-              "0 2px 18px rgba(0,0,0,0.65), 0 1px 3px rgba(0,0,0,0.5)",
+            // Lekerekített, halvány fehér doboz (enyhén elmosott háttérrel)
+            background: "rgba(255,255,255,0.72)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            borderRadius: 24,
+            padding: "12px 28px",
+            boxShadow: "0 8px 30px rgba(0,0,0,0.18)",
           }}
         >
           Hip-hop, house és koreográfia kezdőtől haladóig – fejezd ki magad

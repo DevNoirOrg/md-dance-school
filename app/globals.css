@@ -127,32 +127,15 @@ body {
   .ig-avatar, .ig-bar, .ig-icon { animation: none !important; }
 }
 
-/* ── Szolgáltatások: MD Dance Company előnézet ──────────────────────
-   A hosszú, teljes oldalas képernyőkép a keret tetejéhez igazodik;
-   ráhúzott egérnél végiggörget az oldal aljáig, elengedve gyorsan visszaáll.
-   Érintőképernyőn (nincs hover) magától, lassan oda-vissza görget. */
-.company-preview-shot {
-  background-size: 100% auto;
-  background-repeat: no-repeat;
-  background-position: center top;
-  /* visszafelé (egér elengedésekor): gyorsan felgördül */
-  transition: background-position 2s cubic-bezier(0.65, 0, 0.35, 1);
+/* Stúdió bérlés: a „Ma” gomb után a mai nap rövid türkiz felvillanása */
+.md-today-flash {
+  animation: md-today-flash 1.4s ease-out 1;
 }
-.company-preview:hover .company-preview-shot,
-.company-preview:focus-visible .company-preview-shot {
-  background-position: center bottom;
-  /* ráhúzáskor: azonnal, lendülettel indul, a vége felé lassul */
-  transition: background-position 14s cubic-bezier(0.25, 0.6, 0.4, 1);
-}
-@media (hover: none) {
-  .company-preview-shot {
-    animation: company-scroll 24s ease-in-out infinite alternate;
-  }
-}
-@keyframes company-scroll {
-  0%, 8%    { background-position: center top; }
-  92%, 100% { background-position: center bottom; }
+@keyframes md-today-flash {
+  0%   { box-shadow: 0 0 0 0 rgba(64, 207, 213, 0.9); filter: brightness(1.25); }
+  40%  { box-shadow: 0 0 0 10px rgba(64, 207, 213, 0.25); }
+  100% { box-shadow: 0 0 0 0 rgba(64, 207, 213, 0); filter: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .company-preview-shot { transition: none !important; animation: none !important; }
+  .md-today-flash { animation: none !important; }
 }

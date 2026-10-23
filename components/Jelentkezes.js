@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { useClassSelection, SelectionChip } from './ClassSelection'
 import Arak from './Arak'
+import ConsentChecks, { emptyConsents, consentErrors } from './ConsentChecks'
 
 /*
   Jelentkezési űrlap — az UC (Under Cover) oldal megoldása alapján, MD színekkel:
@@ -87,11 +88,15 @@ export default function Jelentkezes() {
   const [touched, setTouched] = useState({})
   const [submitTried, setSubmitTried] = useState(false)
   const [summary, setSummary] = useState(null) // beküldés utáni összegzés
+  const [consents, setConsents] = useState(emptyConsents)
 
   const age = ageFrom(values.szuletes)
   const minor = age !== null && age >= 0 && age < 16
 
-  const errors = useMemo(() => validate(values, minor, selected.length), [values, minor, selected.length])
+  const errors = useMemo(
+    () => ({ ...validate(values, minor, selected.length), ...consentErrors(consents) }),
+    [values, minor, selected.length, consents],
+  )
   // Hibát csak akkor mutatunk, ha a mezőhöz már hozzányúltak, vagy próbált beküldeni
   const shown = (k) => (submitTried || touched[k] ? errors[k] : undefined)
   const errorCount = Object.keys(errors).length
@@ -110,9 +115,11 @@ export default function Jelentkezes() {
     setSubmitTried(true)
     if (errorCount > 0) {
       // az első hibás helyre görgetünk
-      const order = ['orak', 'vezeteknev', 'keresztnev', 'email', 'szuletes', 'szulo_nev', 'szulo_email', 'tapasztalat', 'kezdes']
+      const order = ['orak', 'vezeteknev', 'keresztnev', 'email', 'szuletes', 'szulo_nev', 'szulo_email', 'tapasztalat', 'kezdes', 'tajekoztato', 'adatkezeles']
       const first = order.find((k) => errors[k])
-      const el = document.getElementById(first === 'orak' ? 'form-selection' : `f-${first}`)
+      const el = document.getElementById(
+        first === 'orak' ? 'form-selection' : first === 'tajekoztato' || first === 'adatkezeles' ? `jel-${first}-row` : `f-${first}`,
+      )
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
@@ -150,6 +157,7 @@ export default function Jelentkezes() {
     setTouched({})
     setSubmitTried(false)
     setSummary(null)
+    setConsents(emptyConsents)
     clear()
     document.getElementById('orarend')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
@@ -300,6 +308,13 @@ export default function Jelentkezes() {
                 <textarea id="f-megjegyzes" rows={4} placeholder="Bármi, amit tudnunk érdemes…"
                   value={values.megjegyzes} onChange={set('megjegyzes')} className={cls('megjegyzes', 'resize-none')} />
               </Field>
+
+              <ConsentChecks
+                idPrefix="jel"
+                values={consents}
+                onChange={(k, v) => setConsents((prev) => ({ ...prev, [k]: v }))}
+                showErrors={submitTried}
+              />
 
               {submitTried && errorCount > 0 && (
                 <p className="rounded-2xl bg-red-50 border-2 border-red-200 text-red-700 text-sm font-bold px-6 py-4">
