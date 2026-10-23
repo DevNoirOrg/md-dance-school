@@ -5,12 +5,15 @@ import { Menu, X } from "lucide-react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 
+// A stúdióbérlés külön oldalra költözött (md-studio-rental); a címe környezeti változóból jön.
+const STUDIO_RENTAL_URL = process.env.NEXT_PUBLIC_STUDIO_RENTAL_URL || "/studio-berles";
+
 const navLinks = [
   { label: "Kezdőlap", href: "#hero" },
   { label: "Tánctábor", href: "/tanctabor" },
   { label: "Órarend", href: "/orarend" },
   { label: "Szolgáltatások", href: "/szolgaltatasok" },
-  { label: "Stúdió bérlés", href: "/studio-berles" },
+  { label: "Stúdió bérlés", href: STUDIO_RENTAL_URL },
   { label: "Elérhetőség", href: "#elerhetoseg" },
 ];
 
@@ -51,7 +54,7 @@ export default function Navbar() {
   }, [pathname]);
 
   const handleNavClick = (e, href) => {
-    if (href.startsWith("/")) {
+    if (href.startsWith("/") || /^https?:\/\//.test(href)) {
       setMobileOpen(false);
       return;
     }

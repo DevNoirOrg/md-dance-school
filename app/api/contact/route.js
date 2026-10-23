@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { validateContact, buildContactEmail } from "@/lib/contact";
-import { emailPattern } from "@/lib/studio-booking";
+import { validateContact, buildContactEmail, emailPattern } from "@/lib/contact";
 
 export const runtime = "nodejs";
 
-// „Írj nekünk” űrlap → e-mail a stúdiónak Resenddel (ugyanazok a beállítások, mint a stúdióbérlésnél).
+// „Írj nekünk” űrlap → e-mail a stúdiónak Resenddel (ugyanaz a Resend fiók, mint a stúdióbérlés oldalon).
 export async function POST(request) {
   let input;
   try {
