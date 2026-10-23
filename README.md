@@ -65,6 +65,58 @@ Before a public production launch, add abuse protection/rate limiting and define
 
 Do not run `npm run build` while `next dev` is running: both use `.next`.
 
+## Admin login
+
+Visit `/admin` to sign in. Set server-only `ADMIN_USERNAME` and `ADMIN_PASSWORD` in
+`.env.local` (and in the hosting provider's environment for deployment). No credentials
+are embedded in client code. After login, a day/week/month calendar shows the four rooms'
+pending and approved bookings using a session-protected `/admin/api/bookings` endpoint.
+Click a booking to open a right-hand details panel (full-width on mobile) with its interval,
+lesson type, price, status and customer contact details. Close with X, Escape, or a click
+outside the panel. Outside controls remain usable, including selecting a different booking.
+The public availability endpoint still excludes customer data, IDs and decision tokens.
+It refreshes every 10 seconds and on focus and supports past/future dates.
+Month cells summarize pending and approved bookings and open the selected day's timeline.
+Day/week grids remain mounted during date-range loading to preserve the page's scroll position;
+selection is disabled until the new range loads, and old-range bookings are hidden.
+Admins can select future intervals, extend them in half-hour steps, choose a lesson type,
+and enter customer contact details. Clicking a selected admin interval again removes it;
+the customer calendar keeps its X removal control. Lesson types are chosen with cards alongside
+the contact form; the group card is disabled if a selected interval is outside Astoria - Nagy Terem.
+Saving uses the session-protected, same-origin POST endpoint
+and the `create_admin_studio_request` RPC to atomically create approved (“Foglalás alatt”)
+slots without sending email. Prices and overlaps are validated server-side; group lessons
+remain restricted to Astoria - Nagy Terem. Pending and approved intervals can be permanently deleted from the details panel after
+confirmation. Only the chosen slot is removed; other slots and the parent request are retained.
+Deletion releases its half-hour occupancy units, sends no email, and requires an authenticated
+same-origin DELETE request. No additional SQL migration is required for deletion.
+Pending and approved intervals can also be rescheduled by clicking “Időpont módosítása” in
+the details panel, then choosing a new start directly on the calendar and confirming the save.
+The rescheduling controls appear below the calendar, in the same area as the new-booking form.
+The panel closes to expose the calendar; room switching is locked, but day/week/month navigation
+remains available. The mouse/keyboard preview uses the original duration: turquoise means the
+whole interval fits; red means overlap, past time, or a finish after 22:00, and cannot be selected.
+Touch users select a valid start by tapping. The original booking is excluded from conflict checks,
+so a partially overlapping move of the same booking is allowed. Cancel leaves it unchanged.
+The authenticated, same-origin PATCH endpoint changes only
+the date and start time: room, duration, price, status and customer data are preserved.
+Only future intervals within 08:00–22:00 are allowed. Existing occupancy triggers atomically
+release the old time and reserve the new one; overlaps roll back the entire update, preserving
+the original booking. Conditional updates detect concurrent rescheduling or deletion.
+After saving, the calendar opens the new date. No email is sent and no additional SQL is needed.
+Run the updated `supabase/studio-bookings.sql` before using admin creation; it adds this RPC
+without deleting bookings. The customer booking/email approval flow remains unchanged.
+
+Production also requires a random `ADMIN_SESSION_SECRET` (generate with
+`openssl rand -hex 32`). Development uses an ephemeral signing key, so restarting the
+server invalidates local sessions. Sessions expire after eight hours and use an HttpOnly,
+SameSite cookie, with Secure enabled in production. Changing credentials invalidates sessions.
+Use strong credentials instead of the local test pair before public deployment, and add
+rate limiting before exposing this test admin login publicly.
+Future admin pages and APIs must verify the session server-side before returning protected data.
+
+Run `node --test tests/admin-auth.test.mjs` to verify credential and session validation.
+
 ## Calendar interval selection
 
 After choosing a lesson type, customers choose from four room cards before the calendar appears.
