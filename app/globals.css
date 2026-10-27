@@ -1,11 +1,37 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* MD arculat (ugyanazok a színek és betűk, mint a stúdióbérlés és az MD Dance Company oldalon). */
+@theme inline {
+  --color-md-cyan: #40cfd5;
+  --color-md-teal: #087c81;
+  --color-md-deep: #179da3;
+  --color-md-pale: #e3f7f8;
+  --color-md-black: #0d0d0d;
+  --color-md-dark: #1a1a1a;
+  --color-md-gray: #2a2a2a;
+  /* admin felület */
+  --color-ink: #0d0d0d;
+  --color-mist: #f4f5f6;
+  --font-sans: var(--font-inter), "Inter", sans-serif;
+  --font-anton: var(--font-anton), "Anton", sans-serif;
+}
+
+/* Tailwind 3 → 4 kompatibilitás: szürke alap keretszín és mutató kurzor a gombokon (mint korábban). */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 html {
@@ -14,7 +40,7 @@ html {
 }
 
 body {
-  font-family: var(--font-inter), 'Inter', sans-serif;
+  font-family: var(--font-inter), "Inter", sans-serif;
   background: #fff;
   color: #000;
   overflow-x: clip;
@@ -29,7 +55,6 @@ body {
     display: block !important;
   }
 }
-
 @media (min-width: 769px) {
   .show-mobile {
     display: none !important;
@@ -37,40 +62,21 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
 }
 
-@layer components {
-  /* Anton szekciócím — a színt szándékosan NEM állítjuk, hogy a text-white/text-* utility felülírhassa sötét szekciókban */
-  .section-title {
-    font-family: var(--font-anton), 'Anton', sans-serif;
-    font-weight: 400;
-    text-transform: uppercase;
-    letter-spacing: 0.01em;
-    line-height: 0.95;
-  }
-
-  /* Jelentkezés form beviteli mező */
-  .md-input {
-    width: 100%;
-    padding: 0.7rem 0.95rem;
-    background: #fff;
-    border: 1px solid #d1d5db;
-    border-radius: 0.6rem;
-    font-family: 'Inter', sans-serif;
-    font-size: 0.95rem;
-    color: #0D0D0D;
-    outline: none;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  }
-  .md-input::placeholder { color: #9ca3af; }
-  .md-input:focus {
-    border-color: #40CFD5;
-    box-shadow: 0 0 0 3px rgba(64, 207, 213, 0.22);
-  }
+/* Anton szekciócím — a színt szándékosan NEM állítjuk, hogy a text-white/text-* utility felülírhassa. */
+@utility section-title {
+  font-family: var(--font-anton), "Anton", sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 0.95;
 }
 
 /* ── Insta-kártya animációk (InstaCard) ─────────────────────────────
@@ -127,15 +133,3 @@ body {
   .ig-avatar, .ig-bar, .ig-icon { animation: none !important; }
 }
 
-/* Stúdió bérlés: a „Ma” gomb után a mai nap rövid türkiz felvillanása */
-.md-today-flash {
-  animation: md-today-flash 1.4s ease-out 1;
-}
-@keyframes md-today-flash {
-  0%   { box-shadow: 0 0 0 0 rgba(64, 207, 213, 0.9); filter: brightness(1.25); }
-  40%  { box-shadow: 0 0 0 10px rgba(64, 207, 213, 0.25); }
-  100% { box-shadow: 0 0 0 0 rgba(64, 207, 213, 0); filter: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .md-today-flash { animation: none !important; }
-}
