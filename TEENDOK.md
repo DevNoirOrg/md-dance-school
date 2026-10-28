@@ -14,6 +14,11 @@ Mind a négy repóra vonatkozik (md-dance-school, md_dance_company, md-studio-re
   - [ ] (az admin átalakítás után) futtasd újra a `supabase/studio-bookings.sql`-t: létrehozza a `rental.rooms` táblát
         (a 4 terem beállításai), a `rental` Storage bucketet (terem képek), és lazítja az időpont-korlátot
         (a nyitvatartás termenként állítható az admin → Termek menüben). Újrafuttatható, foglalást nem töröl.
+  - [ ] **Google Naptár bekötése:** a bérlés repó `GOOGLE-NAPTAR.md` útmutatója szerint (szolgáltatásfiók,
+        a közös naptár (info.mddancestudio@gmail.com) megosztása, Vercel env: `GOOGLE_SERVICE_ACCOUNT_JSON` + `GOOGLE_CALENDAR_ID`, redeploy,
+        SQL újrafuttatása), majd minden admin beállítja magának az értesítéseket (ugyanott leírva).
+  - [ ] Az iskola admin → Adatkezelés szövegébe is: a jóváhagyott stúdiófoglalások adatai a Google Naptárba is bekerülnek
+        (adatfeldolgozó: Google Ireland Ltd.) — a bérlés oldal saját tájékoztatójában már benne van.
   - [ ] Admin → Termek: a valódi fotók feltöltése, méretek, árak óratípusonként és nyitvatartás beállítása termenként.
 - [ ] **pg_cron** bekapcsolása (Integrations → Cron), utána a `mdschool.sql` és `mdcompany.sql` újrafuttatása (1 éves automatikus törlés).
 - [ ] **Authentication:** e-mailes belépés be, „Allow new users to sign up” KI, a Magic Link sablonban legyen `{{ .Token }}`,
@@ -59,6 +64,17 @@ Mind a négy repóra vonatkozik (md-dance-school, md_dance_company, md-studio-re
 - [ ] E-mailes kódos belépés mindhárom adminban.
 - [ ] Képfeltöltés (School, Company) — helyben nem lehetett tesztelni.
 - [ ] Egy-egy próba jelentkezés / üzenet → megjön-e az értesítő e-mail.
+
+## Under Cover — kétnyelvű oldal (magyar / angol)
+
+- [ ] Supabase SQL Editor: futtasd le az Under Cover repó `supabase/2026-10-28-angol.sql` fájlját
+      (angol mezők + a jelentkezés nyelve; újrafuttatható, a meglévő tartalomhoz nem nyúl).
+- [ ] Admin → minden szerkesztőben „English” fül: az angol szövegek kitöltése (hero, Rólunk, órarend,
+      árak, lábléc, form opciók, hírek). Ami üres, ott az angol oldalon a magyar látszik; hír csak
+      angol címmel és szöveggel jelenik meg az angol oldalon.
+- [ ] A kódban lévő angol felületi szövegek átnézése (`lib/i18n.ts`): menü, gombok, űrlap, e-mail.
+- [ ] Élesítés után: `<domain>/en` betölt, a „HU · EN” kapcsoló mindkét irányba működik,
+      egy próba jelentkezés az angol oldalon → az adminban „Angol” jelöléssel jelenik meg.
 
 ## Git
 
