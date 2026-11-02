@@ -47,7 +47,6 @@ export type CoursesContent = {
   intro: string;
   steps: { title: string; text: string }[];
   styles: { title: string; text: string; teachers: string[] }[];
-  groups: { title: string; tag: string; text: string }[];
 };
 
 export type ScheduleSettings = {

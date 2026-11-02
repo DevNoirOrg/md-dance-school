@@ -25,7 +25,7 @@ export default function CoursesEditor({ initial, info }: { initial: CoursesConte
 
   return (
     <div>
-      <PageHeader title="Tanfolyamok" description="Az Órarend oldal fejléce és a „Tanfolyamok” szekció: első lépések, stílusok, szintek és csoportok." />
+      <PageHeader title="Tanfolyamok" description="Az Órarend oldal fejléce, első lépései és stíluskártyái." />
       <div className="space-y-6">
         <Card title="Fejléc és bevezető">
           <div className="grid gap-5 md:grid-cols-2">
@@ -83,25 +83,6 @@ export default function CoursesEditor({ initial, info }: { initial: CoursesConte
           />
         </Card>
 
-        <Card title="Szintek és csoportok">
-          <ListEditor
-            items={v.groups}
-            onChange={(groups) => set("groups", groups)}
-            newItem={() => ({ title: "", tag: "", text: "" })}
-            title={(g) => g.title || "Új csoport"}
-            addLabel="+ Új csoport"
-            max={20}
-            render={(g, upd) => (
-              <div className="space-y-2">
-                <div className="grid gap-2 sm:grid-cols-[1fr_220px]">
-                  <input aria-label="Csoport neve" className={inputCls} placeholder="Kezdő" value={g.title} onChange={(e) => upd({ title: e.target.value })} />
-                  <input aria-label="Címke" className={inputCls} placeholder="Címke, pl. Szint · 14+" value={g.tag} onChange={(e) => upd({ tag: e.target.value })} />
-                </div>
-                <textarea aria-label="Leírás" rows={3} className={textareaCls} value={g.text} onChange={(e) => upd({ text: e.target.value })} />
-              </div>
-            )}
-          />
-        </Card>
       </div>
       <SaveBar
         dirty={!isSame(current, saved)}

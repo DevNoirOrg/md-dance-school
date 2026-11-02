@@ -136,7 +136,11 @@ export function CompanyPreview({ services }: { services: ServicesContent }) {
             <p className="text-xs font-bold uppercase tracking-[0.3em] text-md-deep sm:text-sm">{services.kicker}</p>
           )}
           <h2 className="section-title mt-3 text-4xl text-black sm:text-5xl">{services.title}</h2>
-          <p className="mt-5 text-base leading-relaxed text-gray-600 sm:text-lg">{services.text}</p>
+          <div className="mt-5 space-y-4 text-base leading-relaxed text-gray-600 sm:text-lg">
+            {services.text.split(/\n\s*\n/).map((paragraph, index) => (
+              <p key={index}>{paragraph}</p>
+            ))}
+          </div>
 
           <div className="mt-6 flex flex-wrap justify-center gap-2">
             {services.highlights.map((h) => (

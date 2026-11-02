@@ -148,7 +148,6 @@ const coursesSchema = z.object({
   styles: z
     .array(z.object({ title: required(60, "Stílus neve"), text: text(1500, "Szöveg"), teachers: lines(8, 40, "Tanár") }))
     .max(20),
-  groups: z.array(z.object({ title: required(60, "Csoport neve"), tag: text(40, "Címke"), text: text(1500, "Szöveg") })).max(20),
 });
 
 export async function saveCourses(input: z.input<typeof coursesSchema>) {
