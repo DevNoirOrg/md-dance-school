@@ -5,6 +5,7 @@ import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getSetting, removeMedia, saveSetting, touch } from "@/lib/admin-data";
+import { bodyMediaPaths, sanitizeNewsHtml } from "@/lib/news-html";
 import { assertAdmin } from "@/lib/auth";
 import { CONTENT_TAG } from "@/lib/content";
 import { db } from "@/lib/db";
@@ -19,7 +20,9 @@ import { supabaseServer } from "@/lib/supabase/server";
     4) azonnal frissíti a publikus oldalt (updateTag).
 */
 
-export type ActionResult = { ok: true; id?: string } | { ok: false; error: string };
+export type ActionResult =
+  | { ok: true; id?: string; slug?: string; bodyHtml?: string }
+  | { ok: false; error: string };
 
 const fail = (error: string): ActionResult => ({ ok: false, error });
 
@@ -261,30 +264,102 @@ export async function saveTeachers(input: z.input<typeof teachersSchema>) {
 }
 
 // ---------------------------------------------------------------------
-//  Hírek és események (plakátok a főoldalon)
+//  Hírek — a szekció címe (főoldal) + az egyes hírek (saját mdschool.news
+//  tábla, mindegyik külön menthető/törölhető, saját /hirek/<slug> oldala van)
 // ---------------------------------------------------------------------
+const newsTitleSchema = z.object({ title: required(60, "Cím") });
+
+export async function saveNewsTitle(input: z.input<typeof newsTitleSchema>) {
+  return run(async (email) => {
+    await saveSetting("news", newsTitleSchema.parse(input), email);
+    await touch("news", email);
+    updateTag(CONTENT_TAG);
+  });
+}
+
+function slugify(s: string): string {
+  return (
+    s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 90) || "hir"
+  );
+}
+
+/** Egyedi webcím: a megadott vagy a címből képzett slug, ütközés esetén -2, -3… */
+async function uniqueNewsSlug(wanted: string, title: string, ownId: string | undefined) {
+  const base = (wanted || slugify(title)).slice(0, 90).replace(/-+$/, "");
+  const rows = await db()<{ slug: string }[]>`
+    select slug from mdschool.news where (slug = ${base} or slug like ${base + "-%"})
+      and (${ownId ?? null}::uuid is null or id <> ${ownId ?? null}::uuid)`;
+  const taken = new Set(rows.map((r) => r.slug));
+  let slug = base;
+  for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`;
+  return slug;
+}
+
 const newsSchema = z.object({
-  title: required(60, "Cím"),
-  items: z
-    .array(
-      z.object({
-        imagePath: mediaPath,
-        alt: required(120, "Kép leírása"),
-        format: z.enum(["landscape", "portrait"]),
-        link: url(),
-      }),
-    )
-    .max(4, "Legfeljebb 4 plakát lehet."),
+  id: z.string().uuid().optional(),
+  publishedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Adj meg egy dátumot."),
+  slug: z
+    .string()
+    .trim()
+    .max(100, "Webcím: legfeljebb 100 karakter.")
+    .refine((v) => v === "" || /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(v), "Webcím: csak kisbetű, szám és kötőjel."),
+  title: required(160, "Cím"),
+  excerpt: text(400, "Rövid szöveg"),
+  bodyHtml: z.string().max(200_000, "A hír szövege túl hosszú."),
+  imagePath: mediaPath.nullable(),
+  imageAlt: text(200, "Kép leírása"),
+  placeholderLabel: text(30, "Helyőrző felirat"),
+  format: z.enum(["landscape", "portrait"]),
 });
 
 export async function saveNews(input: z.input<typeof newsSchema>) {
   return run(async (email) => {
-    const value = newsSchema.parse(input);
-    const old = await getSetting("news");
-    await saveSetting("news", value, email);
+    const n = newsSchema.parse(input);
+    const body = sanitizeNewsHtml(n.bodyHtml);
+    let oldImage: string | null = null;
+    let oldBody = "";
+    let id = n.id;
+    const slug = await uniqueNewsSlug(n.slug, n.title, id);
+    if (id) {
+      const [old] = await db()<{ image_path: string | null; body_html: string }[]>`
+        select image_path, body_html from mdschool.news where id = ${id}`;
+      if (!old) return fail("Ez a hír időközben törölve lett.");
+      oldImage = old.image_path;
+      oldBody = old.body_html;
+      await db()`update mdschool.news set published_on = ${n.publishedOn}, slug = ${slug}, title = ${n.title},
+        excerpt = ${n.excerpt}, body_html = ${body}, image_path = ${n.imagePath}, image_alt = ${n.imageAlt || null},
+        placeholder_label = ${n.placeholderLabel}, format = ${n.format},
+        updated_at = now(), updated_by = ${email} where id = ${id}`;
+    } else {
+      id = randomUUID();
+      await db()`insert into mdschool.news
+        (id, published_on, slug, title, excerpt, body_html, image_path, image_alt, placeholder_label, format, updated_by)
+        values (${id}, ${n.publishedOn}, ${slug}, ${n.title}, ${n.excerpt}, ${body}, ${n.imagePath},
+          ${n.imageAlt || null}, ${n.placeholderLabel}, ${n.format}, ${email})`;
+    }
+    if (oldImage && oldImage !== n.imagePath) await removeMedia(oldImage);
+    // a szövegből kikerült feltöltött képek törlése
+    const kept = new Set(bodyMediaPaths(body));
+    for (const p of bodyMediaPaths(oldBody)) if (!kept.has(p)) await removeMedia(p);
     await touch("news", email);
-    const kept = new Set(value.items.map((i) => i.imagePath));
-    await removeMedia(...old.items.map((i) => i.imagePath).filter((p) => !kept.has(p)));
+    updateTag(CONTENT_TAG);
+    return { ok: true, id, slug, bodyHtml: body };
+  });
+}
+
+export async function deleteNews(id: string) {
+  return run(async (email) => {
+    const rows = await db()<{ image_path: string | null; body_html: string }[]>`
+      delete from mdschool.news where id = ${z.string().uuid().parse(id)} returning image_path, body_html`;
+    await removeMedia(rows[0]?.image_path);
+    for (const p of bodyMediaPaths(rows[0]?.body_html ?? "")) await removeMedia(p);
+    await touch("news", email);
     updateTag(CONTENT_TAG);
   });
 }

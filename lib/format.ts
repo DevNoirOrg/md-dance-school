@@ -1,6 +1,14 @@
 /** A Supabase Storage bucket, amibe az admin a képeket / videókat tölti. */
 export const MEDIA_BUCKET = "mdschool";
 
+const MONTHS = ["JAN", "FEB", "MÁR", "ÁPR", "MÁJ", "JÚN", "JÚL", "AUG", "SZEP", "OKT", "NOV", "DEC"];
+
+/** "2026-05-12" → "2026. MÁJ 12" (a hírkártyák és a hír oldalának dátumformátuma). */
+export function newsDateLabel(isoDate: string): string {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  return `${y}. ${MONTHS[m - 1]} ${d}`;
+}
+
 /** Kép/videó címe: "/..." = a public mappából, "http…" = külső, egyébként a Supabase Storage-ból. */
 export function mediaUrl(path: string): string {
   if (path.startsWith("/") || path.startsWith("http")) return path;

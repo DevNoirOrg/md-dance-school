@@ -14,14 +14,19 @@ const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 //  Órajelentkezés
 // ---------------------------------------------------------------------
 export const classApplicationSchema = z.object({
-  vezeteknev: z.string().trim().min(1).max(100),
-  keresztnev: z.string().trim().min(1).max(100),
+  nev: z.string().trim().min(1).max(200),
   email: z.string().trim().max(200).regex(EMAIL_RE),
+  telefon: z
+    .string()
+    .trim()
+    .max(40)
+    .regex(PHONE_RE)
+    .refine((v) => v.replace(/\D/g, "").length >= 7),
   szuletes: date,
+  /** Csak 16 év alatt kérjük, de NEM kötelező (a szülő pótolhatja később is). */
   szulo_nev: z.string().trim().max(200).optional().default(""),
   szulo_email: z.string().trim().max(200).optional().default(""),
   tapasztalat: z.string().trim().min(1).max(100),
-  kezdes: z.string().trim().min(1).max(100),
   megjegyzes: z.string().trim().max(2000).optional().default(""),
   /** „Elolvastam és elfogadom az Adatkezelési tájékoztatóban foglaltakat.” */
   tajekoztato: z.literal(true),
@@ -36,7 +41,7 @@ export type ClassApplicationData = z.output<typeof classApplicationSchema> & { m
 
 export function checkClassApplication(
   raw: unknown,
-  options: { experience: string[]; start: string[] },
+  options: { experience: string[] },
   now?: Date,
 ): { ok: true; data: ClassApplicationData } | { ok: false; error: string } {
   const parsed = classApplicationSchema.safeParse(raw);
@@ -45,16 +50,14 @@ export function checkClassApplication(
   const age = ageFrom(input.szuletes, now);
   if (age === null || age < 0 || age > 100) return { ok: false, error: "Ellenőrizd a születési dátumot." };
   const minor = age < PARENT_REQUIRED_UNDER_AGE;
-  if (minor && (!input.szulo_nev || !EMAIL_RE.test(input.szulo_email))) {
-    return { ok: false, error: `${PARENT_REQUIRED_UNDER_AGE} év alatt add meg a szülőd nevét és e-mail címét.` };
+  // A szülő neve/e-mailje NEM kötelező (sem kiskorúnál) — de ha megadták az e-mailt, legyen érvényes.
+  if (input.szulo_email && !EMAIL_RE.test(input.szulo_email)) {
+    return { ok: false, error: "Add meg a szülő érvényes e-mail címét, vagy hagyd üresen." };
   }
-  if (!options.experience.includes(input.tapasztalat) || !options.start.includes(input.kezdes)) {
+  if (!options.experience.includes(input.tapasztalat)) {
     return { ok: false, error: "Valamelyik választott lehetőség már nem érvényes. Töltsd újra az oldalt." };
   }
-  return {
-    ok: true,
-    data: { ...input, minor, szulo_nev: minor ? input.szulo_nev : "", szulo_email: minor ? input.szulo_email : "" },
-  };
+  return { ok: true, data: { ...input, minor } };
 }
 
 // ---------------------------------------------------------------------

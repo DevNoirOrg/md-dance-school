@@ -1,4 +1,4 @@
-import type { SettingsMap, Teacher } from "./content-types";
+import type { NewsItem, SettingsMap, Teacher } from "./content-types";
 import { defaultPrivacyText } from "./privacy-default.ts";
 
 /*
@@ -115,12 +115,6 @@ export const defaultSettings: SettingsMap = {
   },
   news: {
     title: "HÍREK ÉS\nESEMÉNYEK",
-    items: [
-      { imagePath: "/canva/event-aaron-quinn-workshop.jpg", alt: "Aaron Quinn Workshop", format: "landscape", link: "" },
-      { imagePath: "/canva/event-after-party.png", alt: "(Random) After Party", format: "portrait", link: "" },
-      { imagePath: "/canva/event-summer-camp.png", alt: "Summer '26 Camp", format: "portrait", link: "" },
-      { imagePath: "/canva/event-summer-classes.png", alt: "Summer Classes '26", format: "landscape", link: "" },
-    ],
   },
   camp: {
     badge: "MD Dance School · Nyári tábor",
@@ -204,6 +198,62 @@ export const defaultTeachers: Teacher[] = [
   { id: id(103), name: "Dalma", style: "Hip-Hop", imagePath: "/canva/teacher-02-soxcap.jpg", videoUrl: INSTA },
   { id: id(104), name: "Alex", style: "Hip-Hop, House", imagePath: "/canva/teacher-01-beanie.jpg", videoUrl: INSTA },
   { id: id(105), name: "Oliver", style: "Hip-Hop", imagePath: "/canva/teacher-05-stool.jpg", videoUrl: INSTA },
+];
+
+// Adatbázis nélkül (helyi fejlesztés) ez a 4 helyőrző plakát jelenik meg a főoldalon.
+export const defaultNews: NewsItem[] = [
+  {
+    id: id(301),
+    slug: "aaron-quinn-workshop",
+    publishedOn: "2026-01-01",
+    dateLabel: "2026. JAN 1",
+    imageAlt: "Aaron Quinn Workshop",
+    placeholderLabel: "Aaron Quinn Workshop",
+    imagePath: "/canva/event-aaron-quinn-workshop.jpg",
+    format: "landscape",
+    title: "Aaron Quinn Workshop",
+    excerpt: "",
+    bodyHtml: "",
+  },
+  {
+    id: id(302),
+    slug: "random-after-party",
+    publishedOn: "2026-01-02",
+    dateLabel: "2026. JAN 2",
+    imageAlt: "(Random) After Party",
+    placeholderLabel: "(Random) After Party",
+    imagePath: "/canva/event-after-party.png",
+    format: "portrait",
+    title: "(Random) After Party",
+    excerpt: "",
+    bodyHtml: "",
+  },
+  {
+    id: id(303),
+    slug: "summer-26-camp",
+    publishedOn: "2026-01-03",
+    dateLabel: "2026. JAN 3",
+    imageAlt: "Summer '26 Camp",
+    placeholderLabel: "Summer '26 Camp",
+    imagePath: "/canva/event-summer-camp.png",
+    format: "portrait",
+    title: "Summer '26 Camp",
+    excerpt: "",
+    bodyHtml: "",
+  },
+  {
+    id: id(304),
+    slug: "summer-classes-26",
+    publishedOn: "2026-01-04",
+    dateLabel: "2026. JAN 4",
+    imageAlt: "Summer Classes '26",
+    placeholderLabel: "Summer Classes '26",
+    imagePath: "/canva/event-summer-classes.png",
+    format: "landscape",
+    title: "Summer Classes '26",
+    excerpt: "",
+    bodyHtml: "",
+  },
 ];
 
 /** Órarend nyers alapértéke (a chip/full feliratokat a lib/content.ts számolja). */

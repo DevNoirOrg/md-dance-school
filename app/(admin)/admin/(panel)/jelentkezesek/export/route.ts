@@ -22,11 +22,11 @@ export async function GET(request: Request) {
       a.szuloNev, a.szuloTelefon, a.lakcim, a.tudnivalo, a.honnan, a.kitolto, a.adminNote,
     ]);
   } else {
-    header = ["Beküldve", "Státusz", "Vezetéknév", "Keresztnév", "E-mail", "Születési dátum", "Szülő neve", "Szülő e-mail",
-      "Tánctapasztalat", "Kezdés", "Órák", "Megjegyzés", "Belső megjegyzés"];
+    header = ["Beküldve", "Státusz", "Név", "E-mail", "Telefon", "Születési dátum", "Szülő neve", "Szülő e-mail",
+      "Tánctapasztalat", "Órák", "Megjegyzés", "Belső megjegyzés"];
     rows = (await listClassApplications(status)).map((a) => [
-      when(a.createdAt), label(a.status), a.vezeteknev, a.keresztnev, a.email, a.szuletes, a.szuloNev, a.szuloEmail,
-      a.tapasztalat, a.kezdes, a.classes.join(" | "), a.megjegyzes, a.adminNote,
+      when(a.createdAt), label(a.status), a.nev, a.email, a.telefon, a.szuletes, a.szuloNev, a.szuloEmail,
+      a.tapasztalat, a.classes.join(" | "), a.megjegyzes, a.adminNote,
     ]);
   }
 

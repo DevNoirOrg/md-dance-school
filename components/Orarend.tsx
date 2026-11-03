@@ -158,7 +158,7 @@ export default function Orarend({ rooms, hint }: { rooms: Room[]; hint: string }
               {selected.length === 0 ? "Még nem választottál órát" : `${selected.length} óra kiválasztva`}
             </div>
             <div className="mt-1 text-sm text-white/60">
-              {selected.length === 0 ? "Kattints egy órára az órarendben" : "Többet is választhatsz, vagy vedd le a chipről"}
+              {selected.length === 0 ? "Kattints egy órára az órarendben" : "Többet is választhatsz, vagy távolítsd el a kijelölést"}
             </div>
             {selected.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-2">

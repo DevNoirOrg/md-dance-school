@@ -1,14 +1,35 @@
 "use client";
 import { motion, useInView } from "motion/react";
-import { Fragment, useRef, useSyncExternalStore, type RefObject } from "react";
+import Link from "next/link";
+import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type RefObject } from "react";
 import HalftoneDots from "./HalftoneDots";
 import InstaCard from "./InstaCard";
-import type { NewsContent, NewsItem } from "@/lib/content-types";
+import type { NewsItem } from "@/lib/content-types";
 import { mediaUrl } from "@/lib/format";
 
 // A plakátok — ugyanaz az InstaCard, eltérő méret, képarány és döntés.
 // Asztali nézetben a kártyák ezt a mintát követik (sorban, ismétlődve).
+// Amíg nincs feltöltött kép (vagy még nem töltött be), ez a két alapértelmezett
+// képarány a fallback — valódi fotónál a kártya a kép tényleges arányát veszi fel.
 const RATIO = { landscape: 1.778, portrait: 0.8 } as const;
+
+/** A kép valódi (szélesség/magasság) aránya, amint betöltődött — addig/kép nélkül a fallback. */
+function useNaturalRatio(src: string, fallback: number): number {
+  const [loaded, setLoaded] = useState<{ src: string; ratio: number } | null>(null);
+  useEffect(() => {
+    if (!src) return;
+    let active = true;
+    const img = new window.Image();
+    img.onload = () => {
+      if (active && img.naturalWidth && img.naturalHeight) setLoaded({ src, ratio: img.naturalWidth / img.naturalHeight });
+    };
+    img.src = src;
+    return () => {
+      active = false;
+    };
+  }, [src]);
+  return loaded && loaded.src === src ? loaded.ratio : fallback;
+}
 const LAYOUT = [
   { rotate: -3, y: 40, scale: 1 },
   { rotate: 2.5, y: 120, scale: 1 },
@@ -40,7 +61,13 @@ function EventCard({ item, index, mobile }: { item: NewsItem; index: number; mob
   const l = LAYOUT[index % LAYOUT.length];
   const width = Math.round(BASE_WIDTH[item.format] * l.scale);
   const rest = mobile ? { opacity: 1, y: 0, rotate: l.rotate * 0.7, scale: 1 } : { opacity: 1, y: l.y, rotate: l.rotate, scale: 1 };
-  const card = <InstaCard src={mediaUrl(item.imagePath)} alt={item.alt} ratio={RATIO[item.format]} width={mobile ? 360 : width} />;
+  const imgSrc = item.imagePath ? mediaUrl(item.imagePath) : "";
+  // A kártya a feltöltött kép valódi arányát veszi fel; kép nélkül a Formátum
+  // (fekvő/álló) mező szerinti alapértelmezett arányra esik vissza.
+  const ratio = useNaturalRatio(imgSrc, RATIO[item.format]);
+  // Mindig Insta-kártya (a design visszatérő eleme) — kép nélkül az InstaCard
+  // saját szürke helyőrzőt mutat, de a kártya "kerete" (fejléc, ikonok) megmarad.
+  const card = <InstaCard src={imgSrc} alt={item.imageAlt || item.title} ratio={ratio} width={mobile ? 360 : width} />;
   return (
     <motion.div
       ref={ref}
@@ -51,13 +78,10 @@ function EventCard({ item, index, mobile }: { item: NewsItem; index: number; mob
       transition={{ duration: 0.6, delay: index * 0.08, ease: [0.16, 1, 0.3, 1] }}
       whileHover={mobile ? {} : { y: l.y - 12, rotate: 0, zIndex: 40, transition: { duration: 0.3 } }}
     >
-      {item.link ? (
-        <a href={item.link} target="_blank" rel="noopener noreferrer" aria-label={`${item.alt} — megnyitás új lapon`} className="block rounded-2xl">
-          {card}
-        </a>
-      ) : (
-        card
-      )}
+      {/* A plakátra kattintva mindig a hír saját oldala nyílik meg (nem külső link). */}
+      <Link href={`/hirek/${item.slug}`} aria-label={`${item.title} — a hír megnyitása`} className="block rounded-2xl">
+        {card}
+      </Link>
     </motion.div>
   );
 }
@@ -92,11 +116,12 @@ function Title({
   );
 }
 
-export default function News({ news }: { news: NewsContent }) {
+export default function News({ title, news }: { title: string; news: NewsItem[] }) {
   const mobile = useIsMobile();
   const titleRef = useRef<HTMLHeadingElement>(null);
   const inView = useInView(titleRef, { once: true, margin: "-80px" });
-  const items = news.items.slice(0, 4);
+  // Mindig a 4 legfrissebb hír (a lista már dátum szerint csökkenő sorrendben jön).
+  const items = news.slice(0, 4);
   if (items.length === 0) return null;
 
   return (
@@ -113,16 +138,16 @@ export default function News({ news }: { news: NewsContent }) {
 
       <div className="relative z-10 mx-auto max-w-7xl md:min-h-[640px]">
         {/* Cím — mobilon felül */}
-        {mobile && <Title title={news.title} titleRef={titleRef} inView={inView} className="mb-8" />}
+        {mobile && <Title title={title} titleRef={titleRef} inView={inView} className="mb-8" />}
 
         <div className={mobile ? "flex flex-col items-center gap-8" : "flex items-start justify-center gap-3 pt-2 sm:gap-6"}>
           {items.map((item, i) => (
-            <EventCard key={`${item.imagePath}-${i}`} item={item} index={i} mobile={mobile} />
+            <EventCard key={item.id} item={item} index={i} mobile={mobile} />
           ))}
         </div>
 
         {/* Cím — desktopon balra lent */}
-        {!mobile && <Title title={news.title} titleRef={titleRef} inView={inView} className="absolute bottom-2 left-1 sm:left-4" />}
+        {!mobile && <Title title={title} titleRef={titleRef} inView={inView} className="absolute bottom-2 left-1 sm:left-4" />}
       </div>
     </section>
   );

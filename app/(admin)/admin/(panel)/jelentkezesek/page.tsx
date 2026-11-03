@@ -43,7 +43,7 @@ async function ApplicationsPageContent({ searchParams }: { searchParams: SP }) {
           href: `/admin/jelentkezesek/${a.id}`,
           createdAt: a.createdAt,
           status: a.status,
-          name: `${a.vezeteknev} ${a.keresztnev}`,
+          name: a.nev,
           tag: a.szuloNev ? "16 év alatti" : undefined,
           detail: a.classes.join(" · "),
         }));

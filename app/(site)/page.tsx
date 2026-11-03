@@ -10,7 +10,7 @@ import Teachers from "@/components/Teachers";
 import { getSiteContent } from "@/lib/content";
 
 export default async function Home() {
-  const { settings, rooms, teachers } = await getSiteContent();
+  const { settings, rooms, teachers, news } = await getSiteContent();
   return (
     <main>
       <Navbar />
@@ -23,7 +23,7 @@ export default async function Home() {
         <Jelentkezes prices={settings.prices} options={settings.form_options} />
         <SelectionDock />
       </ClassSelectionProvider>
-      <News news={settings.news} />
+      <News title={settings.news.title} news={news} />
       <Footer footer={settings.footer} />
     </main>
   );

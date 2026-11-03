@@ -124,32 +124,33 @@ export async function submitClassApplication(raw: ClassApplicationInput): Promis
 
   const [row] = await db()<{ id: string }[]>`
     insert into mdschool.applications
-      (vezeteknev, keresztnev, email, szuletes, szulo_nev, szulo_email,
-       tapasztalat, kezdes, megjegyzes, classes, consent_at, ip_hash)
+      (nev, email, telefon, szuletes, szulo_nev, szulo_email,
+       tapasztalat, megjegyzes, classes, consent_at, ip_hash)
     values
-      (${input.vezeteknev}, ${input.keresztnev}, ${input.email.toLowerCase()}, ${input.szuletes},
-       ${input.minor ? input.szulo_nev : null}, ${input.minor ? input.szulo_email.toLowerCase() : null},
-       ${input.tapasztalat}, ${input.kezdes}, ${input.megjegyzes}, ${classLabels}, now(), ${ipHash})
+      (${input.nev}, ${input.email.toLowerCase()}, ${input.telefon}, ${input.szuletes},
+       ${input.szulo_nev || null}, ${input.szulo_email ? input.szulo_email.toLowerCase() : null},
+       ${input.tapasztalat}, ${input.megjegyzes}, ${classLabels}, now(), ${ipHash})
     returning id`;
 
-  const name = `${input.vezeteknev} ${input.keresztnev}`;
+  const name = input.nev;
   const rows: [string, string][] = [
     ["Név", name],
     ["E-mail", input.email],
+    ["Telefon", input.telefon],
     ["Születési dátum", input.szuletes],
   ];
-  if (input.minor) rows.push(["Szülő", `${input.szulo_nev} · ${input.szulo_email}`]);
-  rows.push(["Tánctapasztalat", input.tapasztalat], ["Kezdés", input.kezdes], ["Órák", classLabels.join("\n")]);
+  if (input.szulo_nev || input.szulo_email) rows.push(["Szülő", [input.szulo_nev, input.szulo_email].filter(Boolean).join(" · ")]);
+  rows.push(["Tánctapasztalat", input.tapasztalat], ["Órák", classLabels.join("\n")]);
   if (input.megjegyzes) rows.push(["Megjegyzés", input.megjegyzes]);
 
   notify({
     subject: `Új órajelentkezés: ${name}`,
     name,
     email: input.email,
-    cc: input.minor ? input.szulo_email : undefined,
+    cc: input.szulo_email || undefined,
     rows,
     adminPath: `/jelentkezesek/${row.id}`,
-    confirmIntro: `Kedves ${input.keresztnev}! Megkaptuk a jelentkezésedet, hamarosan keresünk a megadott e-mail címen.`,
+    confirmIntro: `Kedves ${input.nev}! Megkaptuk a jelentkezésedet, hamarosan keresünk a megadott e-mail címen.`,
   });
   return { ok: true };
 }

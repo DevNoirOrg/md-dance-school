@@ -1,9 +1,9 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
-import type { Room, SettingsKey, SettingsMap, Teacher } from "./content-types";
+import type { NewsItem, Room, SettingsKey, SettingsMap, Teacher } from "./content-types";
 import { db, hasDb } from "./db";
-import { defaultRawRooms, defaultSettings, defaultTeachers, type RawRoom } from "./defaults";
-import { classChip, classFull } from "./format";
+import { defaultNews, defaultRawRooms, defaultSettings, defaultTeachers, type RawRoom } from "./defaults";
+import { classChip, classFull, newsDateLabel } from "./format";
 
 /*
   A publikus oldal tartalma — gyorsítótárazva. Az oldal statikus marad; az
@@ -72,10 +72,50 @@ export async function readTeachers(): Promise<Teacher[]> {
   return rows.map((r) => ({ id: r.id, name: r.name, style: r.style, imagePath: r.image_path, videoUrl: r.video_url }));
 }
 
+export async function readNews(): Promise<NewsItem[]> {
+  if (!hasDb()) return defaultNews;
+  const rows = await db()<
+    {
+      id: string;
+      published_on: string;
+      slug: string;
+      title: string;
+      excerpt: string;
+      body_html: string;
+      image_path: string | null;
+      image_alt: string | null;
+      placeholder_label: string;
+      format: "landscape" | "portrait";
+    }[]
+  >`
+    select id, published_on, slug, title, excerpt, body_html, image_path, image_alt, placeholder_label, format
+    from mdschool.news order by published_on desc, created_at desc`;
+  return rows.map((r) => ({
+    id: r.id,
+    slug: r.slug,
+    publishedOn: r.published_on,
+    dateLabel: newsDateLabel(r.published_on),
+    title: r.title,
+    excerpt: r.excerpt,
+    bodyHtml: r.body_html,
+    imagePath: r.image_path,
+    imageAlt: r.image_alt ?? "",
+    placeholderLabel: r.placeholder_label,
+    format: r.format,
+  }));
+}
+
+/** Egy hír a saját oldalához (slug alapján) — adatbázis nélkül a helyőrzők közül keres. */
+export async function getNewsPage(slug: string): Promise<NewsItem | null> {
+  const news = await readNews();
+  return news.find((n) => n.slug === slug) ?? null;
+}
+
 export type SiteContent = {
   settings: SettingsMap;
   rooms: Room[];
   teachers: Teacher[];
+  news: NewsItem[];
 };
 
 /** A teljes publikus tartalom egy gyorsítótárazott lekérdezésben. */
@@ -83,6 +123,6 @@ export async function getSiteContent(): Promise<SiteContent> {
   "use cache";
   cacheLife("max");
   cacheTag(CONTENT_TAG);
-  const [settings, rooms, teachers] = await Promise.all([readSettings(), readRooms(), readTeachers()]);
-  return { settings, rooms, teachers };
+  const [settings, rooms, teachers, news] = await Promise.all([readSettings(), readRooms(), readTeachers(), readNews()]);
+  return { settings, rooms, teachers, news };
 }

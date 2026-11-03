@@ -59,41 +59,38 @@ const meta = (r: MetaRow): Meta => ({
 //  Órajelentkezések
 // ---------------------------------------------------------------------
 export type ClassApplication = Meta & {
-  vezeteknev: string;
-  keresztnev: string;
+  nev: string;
   email: string;
+  telefon: string;
   szuletes: string;
   szuloNev: string | null;
   szuloEmail: string | null;
   tapasztalat: string;
-  kezdes: string;
   megjegyzes: string;
   classes: string[];
 };
 
 type ClassRow = MetaRow & {
-  vezeteknev: string;
-  keresztnev: string;
+  nev: string;
   email: string;
+  telefon: string;
   szuletes: string;
   szulo_nev: string | null;
   szulo_email: string | null;
   tapasztalat: string;
-  kezdes: string;
   megjegyzes: string;
   classes: string[];
 };
 
 const mapClass = (r: ClassRow): ClassApplication => ({
   ...meta(r),
-  vezeteknev: r.vezeteknev,
-  keresztnev: r.keresztnev,
+  nev: r.nev,
   email: r.email,
+  telefon: r.telefon,
   szuletes: r.szuletes,
   szuloNev: r.szulo_nev,
   szuloEmail: r.szulo_email,
   tapasztalat: r.tapasztalat,
-  kezdes: r.kezdes,
   megjegyzes: r.megjegyzes,
   classes: r.classes,
 });

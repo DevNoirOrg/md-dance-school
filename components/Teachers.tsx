@@ -42,9 +42,12 @@ export default function Teachers({ teachers }: { teachers: Teacher[] }) {
   // a relatív pozíciót a [-N/2, N/2] tartományba írja (végtelen körforgás)
   const wrap = (x: number) => (N ? x - N * Math.round(x / N) : 0);
 
-  const [offset, setOffset] = useState((N - 1) / 2); // középső kártya
+  // Egész számra kerekítve: így mindig egy konkrét kártya van középen (nem két
+  // kártya között), és a látható ablak (lásd HALF_WINDOW) kezdettől helyes.
+  const initialOffset = Math.round((N - 1) / 2);
+  const [offset, setOffset] = useState(initialOffset); // középső kártya
   const [w, setW] = useState(1200);
-  const offsetRef = useRef((N - 1) / 2);
+  const offsetRef = useRef(initialOffset);
   const animRef = useRef(0);
   const drag = useRef<Drag>({ active: false, startX: 0, startY: 0, startOffset: 0, video: null });
   const areaRef = useRef<HTMLDivElement>(null);
@@ -93,6 +96,11 @@ export default function Teachers({ teachers }: { teachers: Teacher[] }) {
   // mobilon nagy sugár + kis szög = enyhe ív
   const RADIUS = mobile ? 2200 : 660;
   const STEP = mobile ? 7.5 : 24; // fok két kártya között
+  // fix méretű "ablak": mindig a közép + 2 kártya mindkét oldalon (= 5) legyen
+  // teljesen látható, N (összes tanár száma) változásától függetlenül. A 3-as
+  // érték (nem 2) kell, mert az ad=0,1,2 kártyákat akarjuk 1-es opacitáson
+  // tartani — a kivezető (0 opacitású) határ pont az ablakon kívül, ad=3-nál van.
+  const HALF_WINDOW = 3;
   const TOP_Y = PAD_TOP + cardH / 2;
   const AREA_H = mobile ? TOP_Y + cardH / 2 + 106 : TOP_Y + 370;
   const centerX = w / 2;
@@ -168,7 +176,7 @@ export default function Teachers({ teachers }: { teachers: Teacher[] }) {
           const x = Math.round((centerX + RADIUS * Math.sin(rad)) * 100) / 100;
           const y = Math.round((centerY - RADIUS * Math.cos(rad)) * 100) / 100;
           const ad = Math.abs(d);
-          const opacity = Math.max(0, Math.min(1, (N / 2 - ad) / 0.4));
+          const opacity = Math.max(0, Math.min(1, (HALF_WINDOW - ad) / 0.4));
           return (
             <div
               key={t.id}
