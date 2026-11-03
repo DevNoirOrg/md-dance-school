@@ -105,12 +105,21 @@ export async function readNews(): Promise<NewsItem[]> {
   }));
 }
 
-/** Egy hír a saját oldalához (slug alapján) — adatbázis nélkül a helyőrzők közül keres. */
-export async function getNewsPage(slug: string): Promise<NewsItem | null> {
+// Cache-elt hírlista a slug szerinti kereséshez — NEM admin-olvasás (ahhoz
+// a sima, mindig friss readNews() kell). Szándékosan nem vesz át argumentumot:
+// a "use cache" függvénybe adott kérés-specifikus érték (pl. a route params-ból
+// jövő slug) prerenderelés közben "A `use cache` function took too long..."
+// hibát okoz — ezért a slug szerinti szűrés a cache-határon KÍVÜL történik.
+async function cachedNewsList(): Promise<NewsItem[]> {
   "use cache";
   cacheLife("max");
   cacheTag(CONTENT_TAG);
-  const news = await readNews();
+  return readNews();
+}
+
+/** Egy hír a saját oldalához (slug alapján) — adatbázis nélkül a helyőrzők közül keres. */
+export async function getNewsPage(slug: string): Promise<NewsItem | null> {
+  const news = await cachedNewsList();
   return news.find((n) => n.slug === slug) ?? null;
 }
 
