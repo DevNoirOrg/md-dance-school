@@ -4,10 +4,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
-import { getNewsPage, getSiteContent } from "@/lib/content";
+import { getNewsPage, getSiteContent, readNews } from "@/lib/content";
 import { mediaUrl } from "@/lib/format";
 
 type Props = { params: Promise<{ slug: string }> };
+
+/** Buildkor a meglévő hírek oldalai előre elkészülnek; az újak az első megnyitáskor. */
+export async function generateStaticParams() {
+  const news = await readNews();
+  // legalább egy paraméter kell a build ellenőrzéséhez (üres lista esetén 404 lesz)
+  return news.length > 0 ? news.map((n) => ({ slug: n.slug })) : [{ slug: "nincs-hir" }];
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
