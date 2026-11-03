@@ -107,6 +107,9 @@ export async function readNews(): Promise<NewsItem[]> {
 
 /** Egy hír a saját oldalához (slug alapján) — adatbázis nélkül a helyőrzők közül keres. */
 export async function getNewsPage(slug: string): Promise<NewsItem | null> {
+  "use cache";
+  cacheLife("max");
+  cacheTag(CONTENT_TAG);
   const news = await readNews();
   return news.find((n) => n.slug === slug) ?? null;
 }
