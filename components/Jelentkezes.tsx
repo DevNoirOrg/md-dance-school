@@ -18,32 +18,31 @@ import { ageFrom, EMAIL_RE, PARENT_REQUIRED_UNDER_AGE } from "@/lib/format";
 */
 
 const empty = {
-  vezeteknev: "",
-  keresztnev: "",
+  nev: "",
   email: "",
-  szuletes: "",
+  telefon: "",
   szulo_nev: "",
   szulo_email: "",
+  szuletes: "",
   tapasztalat: "",
-  kezdes: "",
   megjegyzes: "",
   website: "",
 };
 type Values = typeof empty;
 type Key = keyof Values;
 
-const ORDER = ["orak", "vezeteknev", "keresztnev", "email", "szuletes", "szulo_nev", "szulo_email", "tapasztalat", "kezdes", "tajekoztato", "adatkezeles"];
+const ORDER = ["orak", "nev", "email", "telefon", "szuletes", "szulo_nev", "szulo_email", "tapasztalat", "tajekoztato", "adatkezeles"];
 
-function validate(values: Values, minor: boolean, selectedCount: number) {
+function validate(values: Values, selectedCount: number) {
   const errors: Record<string, string> = {};
   if (selectedCount === 0) errors.orak = "Válassz legalább egy órát az órarendből!";
-  const required: Key[] = ["vezeteknev", "keresztnev", "email", "szuletes", "tapasztalat", "kezdes"];
-  if (minor) required.push("szulo_nev", "szulo_email");
+  // A szülő neve/e-mailje NEM kötelező (16 év alatt is csak kérjük, nem követeljük).
+  const required: Key[] = ["nev", "email", "telefon", "szuletes", "tapasztalat"];
   for (const k of required) {
     const v = values[k].trim();
     if (!v) {
-      errors[k] = k === "tapasztalat" || k === "kezdes" ? "Válassz egy lehetőséget." : "Ezt a mezőt kötelező kitölteni.";
-    } else if ((k === "email" || k === "szulo_email") && !EMAIL_RE.test(v)) {
+      errors[k] = k === "tapasztalat" ? "Válassz egy lehetőséget." : "Ezt a mezőt kötelező kitölteni.";
+    } else if (k === "email" && !EMAIL_RE.test(v)) {
       errors[k] = "Adj meg egy érvényes e-mail címet.";
     } else if (k === "szuletes") {
       const a = ageFrom(v);
@@ -52,6 +51,9 @@ function validate(values: Values, minor: boolean, selectedCount: number) {
       else if (a > 100) errors[k] = "Ellenőrizd a megadott dátumot.";
     }
   }
+  // A szülő e-mailje opcionális, de ha ki van töltve, legyen érvényes.
+  const szuloEmail = values.szulo_email.trim();
+  if (szuloEmail && !EMAIL_RE.test(szuloEmail)) errors.szulo_email = "Adj meg egy érvényes e-mail címet, vagy hagyd üresen.";
   return errors;
 }
 
@@ -72,8 +74,8 @@ export default function Jelentkezes({ prices, options }: { prices: PricesContent
   const minor = age !== null && age >= 0 && age < PARENT_REQUIRED_UNDER_AGE;
 
   const errors = useMemo<Record<string, string | undefined>>(
-    () => ({ ...validate(values, minor, selected.length), ...consentErrors(consents) }),
-    [values, minor, selected.length, consents],
+    () => ({ ...validate(values, selected.length), ...consentErrors(consents) }),
+    [values, selected.length, consents],
   );
   // Hibát csak akkor mutatunk, ha a mezőhöz már hozzányúltak, vagy próbált beküldeni
   const shown = (k: Key) => (submitTried || touched[k] ? errors[k] : undefined);
@@ -104,8 +106,6 @@ export default function Jelentkezes({ prices, options }: { prices: PricesContent
     try {
       const res = await submitClassApplication({
         ...values,
-        szulo_nev: minor ? values.szulo_nev : "",
-        szulo_email: minor ? values.szulo_email : "",
         tajekoztato: consents.tajekoztato as true,
         adatkezeles: consents.adatkezeles as true,
         classIds: selected.map((c) => c.id),
@@ -122,12 +122,15 @@ export default function Jelentkezes({ prices, options }: { prices: PricesContent
     }
 
     const rows: [string, string][] = [
-      ["Név", `${values.vezeteknev} ${values.keresztnev}`],
+      ["Név", values.nev],
       ["E-mail", values.email],
+      ["Telefon", values.telefon],
       ["Születési dátum", values.szuletes],
     ];
-    if (minor) rows.push(["Szülő", `${values.szulo_nev} · ${values.szulo_email}`]);
-    rows.push(["Tánctapasztalat", values.tapasztalat], ["Kezdés", values.kezdes], ["Órák", selected.map((c) => c.full).join("\n")]);
+    if (values.szulo_nev.trim() || values.szulo_email.trim()) {
+      rows.push(["Szülő", [values.szulo_nev, values.szulo_email].filter((v) => v.trim()).join(" · ")]);
+    }
+    rows.push(["Tánctapasztalat", values.tapasztalat], ["Órák", selected.map((c) => c.full).join("\n")]);
     if (values.megjegyzes.trim()) rows.push(["Megjegyzés", values.megjegyzes]);
     setSummary(rows);
     setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
@@ -216,20 +219,20 @@ export default function Jelentkezes({ prices, options }: { prices: PricesContent
               </div>
 
               <div className="grid gap-6 md:grid-cols-2">
-                <Field id="f-vezeteknev" label="Vezetéknév" required error={shown("vezeteknev")}>
-                  <input id="f-vezeteknev" type="text" autoComplete="family-name" placeholder="Kovács" maxLength={100}
-                    value={values.vezeteknev} onChange={set("vezeteknev")} onBlur={touch("vezeteknev")} className={cls("vezeteknev")} />
+                <Field id="f-nev" label="Teljes név (Táncos)" required error={shown("nev")}>
+                  <input id="f-nev" type="text" autoComplete="name" placeholder="Kovács Emma" maxLength={200}
+                    value={values.nev} onChange={set("nev")} onBlur={touch("nev")} className={cls("nev")} />
                 </Field>
-                <Field id="f-keresztnev" label="Keresztnév" required error={shown("keresztnev")}>
-                  <input id="f-keresztnev" type="text" autoComplete="given-name" placeholder="Emma" maxLength={100}
-                    value={values.keresztnev} onChange={set("keresztnev")} onBlur={touch("keresztnev")} className={cls("keresztnev")} />
+                <Field id="f-email" label="E-mail cím (Táncos)" required error={shown("email")}>
+                  <input id="f-email" type="email" autoComplete="email" placeholder="hello@valami.hu" maxLength={200}
+                    value={values.email} onChange={set("email")} onBlur={touch("email")} className={cls("email")} />
                 </Field>
               </div>
 
               <div className="grid gap-6 md:grid-cols-2">
-                <Field id="f-email" label="E-mail címed (Táncos)" required error={shown("email")}>
-                  <input id="f-email" type="email" autoComplete="email" placeholder="hello@valami.hu" maxLength={200}
-                    value={values.email} onChange={set("email")} onBlur={touch("email")} className={cls("email")} />
+                <Field id="f-telefon" label="Telefonszám" required error={shown("telefon")}>
+                  <input id="f-telefon" type="tel" autoComplete="tel" placeholder="+36 30 123 4567" maxLength={40}
+                    value={values.telefon} onChange={set("telefon")} onBlur={touch("telefon")} className={cls("telefon")} />
                 </Field>
                 <Field id="f-szuletes" label="Mikor születtél? (Táncos)" required error={shown("szuletes")}>
                   <input id="f-szuletes" type="date"
@@ -237,7 +240,7 @@ export default function Jelentkezes({ prices, options }: { prices: PricesContent
                 </Field>
               </div>
 
-              {/* ---- 16 év alatt: szülő adatai ---- */}
+              {/* ---- Szülő adatai — csak 16 év alatt jelenik meg (a születési dátum alapján), és NEM kötelező ---- */}
               {minor && (
                 <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                   <div className="rounded-2xl border-2 border-md-cyan/40 bg-md-cyan/10 px-6 py-4">
@@ -246,11 +249,11 @@ export default function Jelentkezes({ prices, options }: { prices: PricesContent
                     </p>
                   </div>
                   <div className="grid gap-6 md:grid-cols-2">
-                    <Field id="f-szulo_nev" label="Szülő teljes neve" required error={shown("szulo_nev")}>
+                    <Field id="f-szulo_nev" label="Szülő teljes neve" error={shown("szulo_nev")}>
                       <input id="f-szulo_nev" type="text" placeholder="Kovács Ákos" maxLength={200}
                         value={values.szulo_nev} onChange={set("szulo_nev")} onBlur={touch("szulo_nev")} className={cls("szulo_nev")} />
                     </Field>
-                    <Field id="f-szulo_email" label="Szülő e-mail címe" required error={shown("szulo_email")}>
+                    <Field id="f-szulo_email" label="Szülő e-mail címe" error={shown("szulo_email")}>
                       <input id="f-szulo_email" type="email" placeholder="szulo@valami.hu" maxLength={200}
                         value={values.szulo_email} onChange={set("szulo_email")} onBlur={touch("szulo_email")} className={cls("szulo_email")} />
                     </Field>
@@ -258,16 +261,10 @@ export default function Jelentkezes({ prices, options }: { prices: PricesContent
                 </motion.div>
               )}
 
-              <div className="grid gap-6 md:grid-cols-2">
-                <Field id="f-tapasztalat" label="Táncoltál már korábban?" required error={shown("tapasztalat")}>
-                  <Select id="f-tapasztalat" value={values.tapasztalat} onChange={set("tapasztalat")} onBlur={touch("tapasztalat")}
-                    className={cls("tapasztalat")} options={options.experience} />
-                </Field>
-                <Field id="f-kezdes" label="Mikortól kezdenél?" required error={shown("kezdes")}>
-                  <Select id="f-kezdes" value={values.kezdes} onChange={set("kezdes")} onBlur={touch("kezdes")}
-                    className={cls("kezdes")} options={options.start} />
-                </Field>
-              </div>
+              <Field id="f-tapasztalat" label="Táncoltál már korábban?" required error={shown("tapasztalat")}>
+                <Select id="f-tapasztalat" value={values.tapasztalat} onChange={set("tapasztalat")} onBlur={touch("tapasztalat")}
+                  className={cls("tapasztalat")} options={options.experience} />
+              </Field>
 
               <Field id="f-megjegyzes" label="Megjegyzés">
                 <textarea id="f-megjegyzes" rows={4} placeholder="Bármi, amit tudnunk érdemes…" maxLength={2000}

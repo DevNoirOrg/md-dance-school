@@ -8,12 +8,11 @@ const NOW = new Date("2026-10-23T12:00:00");
 const CLASS_ID = "00000000-0000-4000-8000-000000000201";
 
 const adult = {
-  vezeteknev: "Kovács",
-  keresztnev: "Emma",
+  nev: "Kovács Emma",
   email: "emma@pelda.hu",
+  telefon: "+36 30 123 4567",
   szuletes: "1998-05-12",
   tapasztalat: "Nem",
-  kezdes: "Ma",
   tajekoztato: true as const,
   adatkezeles: true as const,
   classIds: [CLASS_ID],
@@ -31,26 +30,30 @@ test("chip és teljes óraleírás", () => {
   assert.equal(classFull("Nagy terem", "Péntek", "16:00-17:30", "Hip-hop"), "Nagy terem · Péntek · 16:00-17:30 · Hip-hop");
 });
 
-test("órajelentkezés: felnőtt átmegy, a szülő adatai eldobódnak", () => {
+test("órajelentkezés: felnőtt átmegy, a szülő adatai megmaradnak (ha megadták)", () => {
   const r = checkClassApplication({ ...adult, szulo_nev: "X", szulo_email: "x@y.hu" }, defaultSettings.form_options, NOW);
   assert.ok(r.ok);
   if (r.ok) {
     assert.equal(r.data.minor, false);
-    assert.equal(r.data.szulo_nev, "");
+    assert.equal(r.data.szulo_nev, "X");
   }
 });
 
-test("órajelentkezés: 16 év alatt kötelező a szülő neve és e-mailje", () => {
+test("órajelentkezés: 16 év alatt a szülő neve/e-mailje NEM kötelező", () => {
   const kid = { ...adult, szuletes: "2012-01-01" };
-  assert.equal(checkClassApplication(kid, defaultSettings.form_options, NOW).ok, false);
-  const r = checkClassApplication({ ...kid, szulo_nev: "Kovács Ákos", szulo_email: "akos@pelda.hu" }, defaultSettings.form_options, NOW);
+  const r = checkClassApplication(kid, defaultSettings.form_options, NOW);
   assert.ok(r.ok && r.data.minor);
 });
 
-test("órajelentkezés: hiányzó hozzájárulás, ismeretlen opció, óra nélkül → hiba", () => {
+test("órajelentkezés: megadott, de érvénytelen szülő e-mail → hiba", () => {
+  const kid = { ...adult, szuletes: "2012-01-01", szulo_email: "nem-email" };
+  assert.equal(checkClassApplication(kid, defaultSettings.form_options, NOW).ok, false);
+});
+
+test("órajelentkezés: hiányzó hozzájárulás, érvénytelen telefon, óra nélkül → hiba", () => {
   const o = defaultSettings.form_options;
   assert.equal(checkClassApplication({ ...adult, adatkezeles: false }, o, NOW).ok, false);
-  assert.equal(checkClassApplication({ ...adult, kezdes: "Tegnap" }, o, NOW).ok, false);
+  assert.equal(checkClassApplication({ ...adult, telefon: "ab" }, o, NOW).ok, false);
   assert.equal(checkClassApplication({ ...adult, classIds: [] }, o, NOW).ok, false);
   assert.equal(checkClassApplication({ ...adult, szuletes: "2030-01-01" }, o, NOW).ok, false);
 });

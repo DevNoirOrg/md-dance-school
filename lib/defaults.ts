@@ -1,4 +1,4 @@
-import type { SettingsMap, Teacher } from "./content-types";
+import type { NewsItem, SettingsMap, Teacher } from "./content-types";
 import { defaultPrivacyText } from "./privacy-default.ts";
 
 /*
@@ -14,16 +14,18 @@ const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")
 export const defaultSettings: SettingsMap = {
   hero: {
     title: "WELCOME TO MD",
-    lead: "Hip-hop, house és koreográfia kezdőtől haladóig – fejezd ki magad a tánccal, és éld át velünk az MD életérzést!",
+    lead: "Számunkra a street dance több mint mozgás. Kultúra, zene, közösség és önkifejezés. Hiszünk az autentikus oktatásban, valamint a táncosok szakmai és emberi fejlődésében.",
     imagePath: "/canva/hero-crowd.jpg",
   },
   about: {
-    titleLine1: "A MASTER DANCE",
-    titleLine2: "TÁNCISKOLA",
+    titleLine1: "AZ MD ÉLETÉRZÉS",
+    titleLine2: "",
     paragraphs: [
-      "A tánctanítás több szinten folyik nálunk. Kezdőtől középhaladóig minden csoport elérhető. Tanáraink profin és elhivatottan adják át tudásukat diákjainknak.",
-      "Master Dance az egyik legnépszerűbb tánciskola a belvárosban. Tánctanfolyamaink elérhetők gyerekeknek, tinédzsereknek és felnőtteknek egyaránt, angol és magyar nyelven is. Mindegy, hogy kezdő vagy haladóbb szinten szeretnél táncolni, nálunk minden csoportban minőségi táncoktatás folyik. Budapesten két tánc stúdióval rendelkezünk, igényes, jól felszerelt tánctermekkel.",
-      "Ha egy igazán jó közösségben szeretnél táncolni, profi és őszinte elhivatottsággal oktató tanároktól szeretnél tanulni, akkor biztos, hogy nálunk a helyed.",
+      "Az MD-ben hiszünk abban, hogy a tánc nemcsak a mozdulatokról szól, hanem a mögöttük rejlő kultúráról, értékekről és az önkifejezés szabadságáról is.",
+      "Tánciskolánk célja a street dance stílusok autentikus oktatása, a biztos technikai alapok átadása és a tehetségek tudatos fejlesztése. Fontos számunkra, hogy tanítványaink ne csak táncosként, hanem emberként is fejlődjenek: önbizalmat, kitartást, kreativitást és egymás iránti tiszteletet tanuljanak.",
+      "Az MD azonban több mint egy tánciskola. Az MD Dance Studio bérelhető tánctermeivel biztosít helyszínt táncórákhoz, próbákhoz, workshopokhoz és kreatív projektekhez, míg az MD Dance Company professzionális fellépésekkel, koreográfiákkal és táncos produkciókkal képviseli a márkát.",
+      "Együtt egy olyan közösséget építünk, ahol a tudás, a szenvedély és a fejlődés találkozik.",
+      "Együtt tanulunk. Együtt fejlődünk. Együtt alkotunk.",
     ].join("\n\n"),
     imagePath: "/canva/about-group.jpg",
     imageAlt: "Master Dance csoportos tánc előadás",
@@ -31,12 +33,12 @@ export const defaultSettings: SettingsMap = {
   services: {
     heroTitle: "SZOLGÁLTATÁSOK",
     heroLead: "Show, koreográfia és produkció — rendezvényekre, színpadra és kamera elé.",
-    kicker: "MD Dance Company",
-    title: "A tánciskola mögött egy show-csapat áll",
-    text: "Koreográfiát, show-produkciót és teljes színpadi élményt készítünk sporteseményekre, koncertekre és márkáknak. Ha fellépőt, nyitóshow-t vagy egyedi koreográfiát keresel a rendezvényedre, nézz be hozzánk.",
-    highlights: ["Sport ceremóniák és nyitóshow-k", "Élő show- és koncertprodukció", "Koreográfia és art design"],
+    kicker: "",
+    title: "Ismerd meg az MD professzionális világát!",
+    text: "Az MD Dance Company a tánciskolán túlmutató, professzionális produkcióink otthona. Egyedi koreográfiákkal, látványos show-műsorokkal és színpadi produkciókkal tesszük emlékezetessé a sporteseményeket, koncerteket és márkák rendezvényeit.\n\nVan egy ötleted vagy projekted? Örömmel dolgozunk együtt veled! Keress minket elképzeléseiddel, és keltsük közösen életre az ötleteidet!",
+    highlights: [],
     url: "https://www.mddancecompany.com/",
-    buttonLabel: "Tovább az MD Dance Company oldalára",
+    buttonLabel: "Fedezd fel az MD Dance Company-t!",
   },
   prices: {
     items: [
@@ -83,55 +85,28 @@ export const defaultSettings: SettingsMap = {
       },
       {
         title: "Hip-hop",
-        text: "Az alapok, amikre minden épül: groove, bounce, ritmus és a klasszikus lépések. Tréning és technika váltja egymást, a végén pedig tiszta hip-hop koreográfiában használod mindazt, amit az órán tanultál.",
+        text: "A hip-hop alapja a groove, a bounce, a ritmus és a klasszikus lépések elsajátítása. Az órákon alapgyakorlatok, különböző rutinok és freestyle feladatok segítségével fejlesztjük a technikát, a zeneiséget és az egyéni mozgásvilágot. A tanultakat koreográfiákban is alkalmazzuk, miközben teret adunk a kreativitásnak és az önkifejezésnek.",
         teachers: ["Dalma", "Alex"],
       },
       {
-        title: "Girly / Commercial",
-        text: "Csajos energia és magabiztos kisugárzás: dögös, látványos koreográfiák a klipek és a színpad világából. Mindenkit szeretettel várunk, nemtől függetlenül — itt a hangulat és az önbizalom a lényeg.",
+        title: "Girly",
+        text: "Csajos, energikus és látványos koreográfiák, amelyek a nőies mozdulatokra, a magabiztos kisugárzásra és az előadásmódra épülnek. Az órákon a koreográfiák elsajátítása mellett a mozgáskoordinációt, a zeneiséget és az önkifejezést is fejlesztjük. Nemtől függetlenül mindenkit várunk, aki szeretné felfedezni ezt a stílust!",
         teachers: ["Lili", "Lia"],
       },
       {
         title: "High heels",
-        text: "Táncolj magassarkúban! A gyors, energikus daraboktól a lassú, érzéki koreográfiákig mindent kipróbálsz, közben pedig megtanulod a sarokban való járás, forgás és tánc technikáját — és azt a tartást, amit az utcára is magaddal viszel.",
+        text: "A magassarkúban táncolás a technika, az elegancia és a magabiztos előadásmód találkozása. Az órákon járásgyakorlatokkal, forgásokkal, földelemekkel és különböző mozgástechnikákkal fejlesztjük az egyensúlyt, a testtudatot és a mozgáskontrollt. A tanultakat dinamikus és érzéki koreográfiákban alkalmazzuk, nagy hangsúlyt fektetve az önkifejezésre.",
         teachers: ["Lia"],
       },
       {
         title: "House",
-        text: "A klubok tánca: improvizatív, játékos és folyékony, gyors lábmunkával és rengeteg szabadsággal. Ha szereted a house zenét, itt a lépéseit is megismered — ha pedig valami teljesen újat próbálnál, ez remek választás.",
+        text: "A klubkultúrából született, energikus és szabad táncstílus, amelynek alapja a zeneiség, a groove és a folyamatos mozgás. Az órákon jacking, footwork, alaplépések és freestyle gyakorlatok segítségével fejlesztjük a ritmusérzéket, a koordinációt és az egyéni mozgásvilágot. A hangsúly a zene megélésén, az improvizáción és a kreatív önkifejezésen van.",
         teachers: ["Alex"],
       },
-    ],
-    groups: [
       {
-        title: "Kezdő",
-        tag: "Szint",
-        text: "Az első lépés — vagy a visszatérés a tánchoz. Nulláról indulunk, lépésről lépésre, egy lelkes, gyorsan fejlődő csapatban. Sokan itt kezdik, és az évzáró gálán már magabiztosan állnak színpadra.",
-      },
-      {
-        title: "Középhaladó",
-        tag: "Szint",
-        text: "Ha az alapok már mennek, és többre vágysz: összetettebb koreográfiák, gyorsabb tempó, nagyobb kihívás. Céltudatos, ambiciózus társaság, ahol mindenki húzza a másikat.",
-      },
-      {
-        title: "Haladó",
-        tag: "Szint · 14+",
-        text: "Azoknak, akiknek a tánc már az életük része. Régi, elhivatott tagok, magas tempó és igényes munka. 14 éves kortól várjuk azokat, akik régóta táncolnak és készen állnak a következő szintre.",
-      },
-      {
-        title: "Felnőtt csoport",
-        tag: "18–36 év",
-        text: "Kezdőtől középhaladóig, kötetlen, jó hangulatú órákon. Levezetheted a hétköznapok stresszét, és végre megvalósíthatod a régi álmod: megtanulsz táncolni. Ha angolul tanulnál, nézd meg az International Classt!",
-      },
-      {
-        title: "International Class",
-        tag: "Angol nyelvű · 18+",
-        text: "Angol nyelvű órák nemzetközi társaságban, Zsolt vezetésével, kezdő és középhaladó szinten. A világ minden tájáról érkeznek ide diákok, de a magyarokat is szeretettel várjuk.",
-      },
-      {
-        title: "Open Class",
-        tag: "Bárkinek",
-        text: "Kipróbálnád magad? Az open classokon bárki beállhat — vendég és MD-s diák egyaránt —, és minden alkalommal más táncos koreográfiáját tanulhatod meg. Óradíjas alkalmak, bérlettel díjmentesen látogathatók.",
+        title: "Afro Fusion",
+        text: "Különböző afrikai táncstílusok és mozgáskultúrák találkozása, tele energiával, ritmussal és lendülettel. Az órákon alaplépések, groove-ok, izolációk és koreográfiák segítségével ismerkedünk a különböző stílusok mozgásvilágával. Nagy hangsúlyt fektetünk a zeneiségre, a testtudatra és a szabad önkifejezésre, miközben megismerjük a mozdulatok kulturális hátterét is.",
+        teachers: ["Jayson"],
       },
     ],
   },
@@ -140,12 +115,6 @@ export const defaultSettings: SettingsMap = {
   },
   news: {
     title: "HÍREK ÉS\nESEMÉNYEK",
-    items: [
-      { imagePath: "/canva/event-aaron-quinn-workshop.jpg", alt: "Aaron Quinn Workshop", format: "landscape", link: "" },
-      { imagePath: "/canva/event-after-party.png", alt: "(Random) After Party", format: "portrait", link: "" },
-      { imagePath: "/canva/event-summer-camp.png", alt: "Summer '26 Camp", format: "portrait", link: "" },
-      { imagePath: "/canva/event-summer-classes.png", alt: "Summer Classes '26", format: "landscape", link: "" },
-    ],
   },
   camp: {
     badge: "MD Dance School · Nyári tábor",
@@ -229,6 +198,62 @@ export const defaultTeachers: Teacher[] = [
   { id: id(103), name: "Dalma", style: "Hip-Hop", imagePath: "/canva/teacher-02-soxcap.jpg", videoUrl: INSTA },
   { id: id(104), name: "Alex", style: "Hip-Hop, House", imagePath: "/canva/teacher-01-beanie.jpg", videoUrl: INSTA },
   { id: id(105), name: "Oliver", style: "Hip-Hop", imagePath: "/canva/teacher-05-stool.jpg", videoUrl: INSTA },
+];
+
+// Adatbázis nélkül (helyi fejlesztés) ez a 4 helyőrző plakát jelenik meg a főoldalon.
+export const defaultNews: NewsItem[] = [
+  {
+    id: id(301),
+    slug: "aaron-quinn-workshop",
+    publishedOn: "2026-01-01",
+    dateLabel: "2026. JAN 1",
+    imageAlt: "Aaron Quinn Workshop",
+    placeholderLabel: "Aaron Quinn Workshop",
+    imagePath: "/canva/event-aaron-quinn-workshop.jpg",
+    format: "landscape",
+    title: "Aaron Quinn Workshop",
+    excerpt: "",
+    bodyHtml: "",
+  },
+  {
+    id: id(302),
+    slug: "random-after-party",
+    publishedOn: "2026-01-02",
+    dateLabel: "2026. JAN 2",
+    imageAlt: "(Random) After Party",
+    placeholderLabel: "(Random) After Party",
+    imagePath: "/canva/event-after-party.png",
+    format: "portrait",
+    title: "(Random) After Party",
+    excerpt: "",
+    bodyHtml: "",
+  },
+  {
+    id: id(303),
+    slug: "summer-26-camp",
+    publishedOn: "2026-01-03",
+    dateLabel: "2026. JAN 3",
+    imageAlt: "Summer '26 Camp",
+    placeholderLabel: "Summer '26 Camp",
+    imagePath: "/canva/event-summer-camp.png",
+    format: "portrait",
+    title: "Summer '26 Camp",
+    excerpt: "",
+    bodyHtml: "",
+  },
+  {
+    id: id(304),
+    slug: "summer-classes-26",
+    publishedOn: "2026-01-04",
+    dateLabel: "2026. JAN 4",
+    imageAlt: "Summer Classes '26",
+    placeholderLabel: "Summer Classes '26",
+    imagePath: "/canva/event-summer-classes.png",
+    format: "landscape",
+    title: "Summer Classes '26",
+    excerpt: "",
+    bodyHtml: "",
+  },
 ];
 
 /** Órarend nyers alapértéke (a chip/full feliratokat a lib/content.ts számolja). */

@@ -104,7 +104,7 @@ export default function Hero({ hero }: { hero: HeroContent }) {
           }}
         >
           <motion.p
-            className="lg:whitespace-nowrap"
+            className="w-full max-w-5xl min-w-0 break-words"
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}

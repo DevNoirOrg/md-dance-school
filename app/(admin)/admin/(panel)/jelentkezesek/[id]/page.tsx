@@ -23,9 +23,7 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
         ← Vissza a listához
       </Link>
       <div className="mb-6 mt-4 flex flex-wrap items-center gap-3">
-        <h1 className="text-3xl font-black">
-          {a.vezeteknev} {a.keresztnev}
-        </h1>
+        <h1 className="text-3xl font-black">{a.nev}</h1>
         <span className={`rounded-full px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest ${status?.badge}`}>{status?.label}</span>
         <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Órajelentkezés</span>
       </div>
@@ -35,14 +33,15 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
           <dl className="divide-y divide-slate-100">
             <DetailRow k="Beküldve">{new Date(a.createdAt).toLocaleString("hu-HU")}</DetailRow>
             <DetailRow k="E-mail">{mailLink(a.email)}</DetailRow>
+            <DetailRow k="Telefon">{a.telefon}</DetailRow>
             <DetailRow k="Születési dátum">{a.szuletes}</DetailRow>
-            {a.szuloNev && (
+            {(a.szuloNev || a.szuloEmail) && (
               <DetailRow k="Szülő">
-                {a.szuloNev} · {a.szuloEmail && mailLink(a.szuloEmail)}
+                {a.szuloNev} {a.szuloNev && a.szuloEmail && "· "}
+                {a.szuloEmail && mailLink(a.szuloEmail)}
               </DetailRow>
             )}
             <DetailRow k="Tánctapasztalat">{a.tapasztalat}</DetailRow>
-            <DetailRow k="Kezdés">{a.kezdes}</DetailRow>
             <DetailRow k="Órák">
               <ul className="space-y-1">
                 {a.classes.map((c) => (

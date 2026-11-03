@@ -29,27 +29,9 @@ export default function Tanfolyamok({ courses }: { courses: CoursesContent }) {
           {courses.intro && <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-gray-600 sm:text-lg">{courses.intro}</p>}
         </FadeIn>
 
-        {/* 1) Mielőtt jössz */}
-        {courses.steps.length > 0 && (
-          <>
-            <GroupTitle kicker="Első lépések" title="Mielőtt jössz" />
-            <div className="grid gap-5 md:grid-cols-3">
-              {courses.steps.map((c, i) => (
-                <FadeIn key={i} delay={i * 0.08}>
-                  <div className="h-full rounded-[1.75rem] bg-black p-7 text-white shadow-[0_18px_50px_rgba(0,0,0,0.18)]">
-                    <span className="section-title text-4xl text-md-cyan">{String(i + 1).padStart(2, "0")}</span>
-                    <h4 className="mt-3 text-xl font-extrabold">{c.title}</h4>
-                    <p className="mt-3 text-[15px] leading-relaxed text-white/75">{c.text}</p>
-                  </div>
-                </FadeIn>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* 2) Stílusok */}
+        {/* 1) Stílusok */}
         {courses.styles.length > 0 && (
-          <div className="mt-20 sm:mt-24">
+          <>
             <GroupTitle kicker="Amit tanítunk" title="Stílusok" />
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {courses.styles.map((c, i) => (
@@ -72,24 +54,20 @@ export default function Tanfolyamok({ courses }: { courses: CoursesContent }) {
                 </FadeIn>
               ))}
             </div>
-          </div>
+          </>
         )}
 
-        {/* 3) Szintek és csoportok */}
-        {courses.groups.length > 0 && (
+        {/* 2) Mielőtt jössz */}
+        {courses.steps.length > 0 && (
           <div className="mt-20 sm:mt-24">
-            <GroupTitle kicker="Kinek szól" title="Szintek és csoportok" />
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {courses.groups.map((c, i) => (
-                <FadeIn key={i} delay={(i % 3) * 0.08}>
-                  <div className="h-full rounded-[1.75rem] bg-gray-50 p-7 ring-1 ring-black/5">
-                    {c.tag && (
-                      <span className="inline-block rounded-full bg-md-cyan px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-black">
-                        {c.tag}
-                      </span>
-                    )}
-                    <h4 className="mt-4 text-2xl font-extrabold text-black">{c.title}</h4>
-                    <p className="mt-3 text-[15px] leading-relaxed text-gray-600">{c.text}</p>
+            <GroupTitle kicker="Első lépések" title="Mielőtt jössz" />
+            <div className="grid gap-5 md:grid-cols-3">
+              {courses.steps.map((c, i) => (
+                <FadeIn key={i} delay={i * 0.08}>
+                  <div className="h-full rounded-[1.75rem] bg-black p-7 text-white shadow-[0_18px_50px_rgba(0,0,0,0.18)]">
+                    <span className="section-title text-4xl text-md-cyan">{String(i + 1).padStart(2, "0")}</span>
+                    <h4 className="mt-3 text-xl font-extrabold">{c.title}</h4>
+                    <p className="mt-3 text-[15px] leading-relaxed text-white/75">{c.text}</p>
                   </div>
                 </FadeIn>
               ))}

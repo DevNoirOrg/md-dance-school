@@ -47,7 +47,6 @@ export type CoursesContent = {
   intro: string;
   steps: { title: string; text: string }[];
   styles: { title: string; text: string; teachers: string[] }[];
-  groups: { title: string; tag: string; text: string }[];
 };
 
 export type ScheduleSettings = {
@@ -56,14 +55,29 @@ export type ScheduleSettings = {
 };
 
 export type NewsItem = {
-  imagePath: string;
-  alt: string;
+  id: string;
+  /** A hír saját oldala: /hirek/<slug>. */
+  slug: string;
+  /** "2026-05-12" */
+  publishedOn: string;
+  /** Pl. "2026. MÁJ 12" — a publishedOn-ból számolva. */
+  dateLabel: string;
+  /** A hírkártyán megjelenő kép leírása (nem a cikk címe — a poszter-kártya csak a képet mutatja). */
+  imageAlt: string;
+  /** Ha nincs kép, ez a felirat látszik a szürke dobozban. */
+  placeholderLabel: string;
+  imagePath: string | null;
   /** Képarány: "landscape" = 16:9, "portrait" = 4:5. */
   format: "landscape" | "portrait";
-  /** Ha meg van adva, a kártyára kattintva ez nyílik meg új lapon. */
-  link: string;
+  /** A hír oldalának címe. */
+  title: string;
+  /** Rövid szöveg a hír oldalán, a cím alatt. */
+  excerpt: string;
+  /** A hír teljes szövege (szerveroldalon megtisztított HTML). */
+  bodyHtml: string;
 };
-export type NewsContent = { title: string; items: NewsItem[] };
+/** A hírek szekció címe a főoldalon (a hírek listája már a mdschool.news táblából jön). */
+export type NewsContent = { title: string };
 
 export type CampPrice = { emoji: string; name: string; price: string; until: string };
 export type CampTurnus = { id: string; label: string; dates: string; days: string; closed: boolean; status: string };

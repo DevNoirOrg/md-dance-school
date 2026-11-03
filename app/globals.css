@@ -133,3 +133,37 @@ body {
   .ig-avatar, .ig-bar, .ig-icon { animation: none !important; }
 }
 
+
+/* ====================================================================
+   Hírek — a hír oldalának teljes szövege (admin WYSIWYG → sanitizált HTML)
+   ==================================================================== */
+.news-body h2 {
+  @apply font-sans text-xl md:text-2xl font-extrabold text-ink mt-10 mb-4 scroll-mt-28;
+}
+.news-body h3 {
+  @apply font-sans text-lg font-bold text-ink mt-8 mb-3;
+}
+.news-body p {
+  @apply text-base leading-relaxed text-gray-600 mb-4;
+}
+.news-body ul {
+  @apply list-disc pl-6 space-y-2 text-base leading-relaxed text-gray-600 mb-4 marker:text-md-deep;
+}
+.news-body ol {
+  @apply list-decimal pl-6 space-y-2 text-base leading-relaxed text-gray-600 mb-4 marker:text-md-deep marker:font-bold;
+}
+.news-body strong {
+  @apply text-ink font-bold;
+}
+.news-body a {
+  @apply text-md-deep font-semibold underline underline-offset-2 hover:text-ink;
+}
+.news-body blockquote {
+  @apply border-l-4 border-md-cyan pl-5 my-6 italic text-gray-600;
+}
+.news-body img {
+  @apply w-full h-auto rounded-[1.5rem] my-8;
+}
+.news-body li > p {
+  @apply mb-0;
+}
