@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import Footer from "@/components/Footer";
 import LanguageSwitch from "@/components/LanguageSwitch";
 import Navbar from "@/components/Navbar";
-import { getSiteContent, readNews } from "@/lib/content";
+import { getNewsPage, getSiteContent, readNews } from "@/lib/content";
 import { hasEnglishNews, localize, localizeSettings } from "@/lib/localize";
 import { mediaUrl } from "@/lib/format";
 import { alternateLocalePath } from "@/lib/i18n";
@@ -21,7 +21,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const item = (await readNews()).find((news) => news.slug === decodeURIComponent(slug));
+  const item = await getNewsPage(decodeURIComponent(slug));
   if (!item || !hasEnglishNews(item)) return { title: "News not found – MD Dance School" };
   const en = localize(item, "en");
   return {
@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function EnglishNewsArticle({ params }: Props) {
   const { slug } = await params;
   const [item, { settings: rawSettings }] = await Promise.all([
-    (await readNews()).find((news) => news.slug === decodeURIComponent(slug)) ?? null,
+    getNewsPage(decodeURIComponent(slug)),
     getSiteContent(),
   ]);
   if (!item || !hasEnglishNews(item)) notFound();
