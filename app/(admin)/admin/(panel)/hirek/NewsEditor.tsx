@@ -4,10 +4,12 @@ import { useState } from "react";
 import { deleteNews, saveNews, saveNewsTitle } from "@/app/actions/admin";
 import MediaField from "@/components/admin/MediaField";
 import RichTextEditor from "@/components/admin/RichTextEditor";
+import LanguageEditor from "@/components/admin/LanguageEditor";
 import { Button, Card, EditInfoLine, Field, PageHeader, StatusText, inputCls, isSame, textareaCls, useSaver } from "@/components/admin/ui";
 import type { EditInfo } from "@/lib/admin-data";
-import type { NewsItem } from "@/lib/content-types";
+import type { NewsContent, NewsItem } from "@/lib/content-types";
 import { mediaUrl } from "@/lib/format";
+import { hasEnglishNews } from "@/lib/localize";
 
 /* eslint-disable @next/next/no-img-element -- admin előnézet */
 
@@ -22,6 +24,7 @@ type Draft = {
   imageAlt: string;
   placeholderLabel: string;
   format: "landscape" | "portrait";
+  en?: NewsItem["en"];
 };
 
 const toDraft = (n: NewsItem): Draft => ({
@@ -35,24 +38,29 @@ const toDraft = (n: NewsItem): Draft => ({
   imageAlt: n.imageAlt,
   placeholderLabel: n.placeholderLabel,
   format: n.format,
+  en: n.en,
 });
 
 const today = () => new Date().toISOString().slice(0, 10);
 
 /** A hírek szekció címe a főoldalon (a HÍREK ÉS\nESEMÉNYEK felirat). */
-function TitleCard({ initial, info }: { initial: string; info: EditInfo }) {
+function TitleCard({ initial, info }: { initial: NewsContent; info: EditInfo }) {
   const [saved, setSaved] = useState(initial);
   const [v, setV] = useState(initial);
   const { pending, status, save } = useSaver();
-  const dirty = v !== saved;
+  const dirty = !isSame(v, saved);
 
   return (
     <Card title="Szekció címe">
-      <Field label="Cím" htmlFor="n-title" hint="Új sorba törhető (Enter).">
-        <textarea id="n-title" rows={2} className={`${textareaCls} max-w-sm`} value={v} onChange={(e) => setV(e.target.value)} />
-      </Field>
+      <LanguageEditor value={v} onChange={setV}>
+        {(x, setX) => (
+        <Field label="Cím" htmlFor="n-title" hint="Új sorba törhető (Enter).">
+          <textarea id="n-title" rows={2} className={`${textareaCls} max-w-sm`} value={x.title} onChange={(e) => setX({ ...x, title: e.target.value })} />
+        </Field>
+        )}
+      </LanguageEditor>
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <Button variant="primary" disabled={pending || !dirty} onClick={() => save(() => saveNewsTitle({ title: v }), undefined, () => setSaved(v))}>
+        <Button variant="primary" disabled={pending || !dirty} onClick={() => save(() => saveNewsTitle(v), undefined, () => setSaved(v))}>
           {pending ? "Mentés…" : "Mentés"}
         </Button>
         {dirty && !pending && !status && <span className="text-sm font-bold text-amber-600">Mentetlen változások</span>}
@@ -67,19 +75,22 @@ function NewsForm({ initial, onDone, isNew }: { initial: Draft; onDone: () => vo
   const [saved, setSaved] = useState(initial);
   const [d, setD] = useState(initial);
   const { pending, status, save } = useSaver();
-  const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((p) => ({ ...p, [k]: v }));
   const dirty = !isSame(d, saved);
   const fid = (x: string) => `${x}-${d.id ?? "new"}`;
 
   return (
+    <LanguageEditor value={d} onChange={setD}>
+    {(x, setX, locale) => {
+      const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setX({ ...x, [key]: value });
+      return (
     <div className="grid gap-4 sm:grid-cols-[200px_minmax(0,1fr)]">
       <div className="space-y-4">
         <MediaField
           kind="image"
-          value={d.imagePath}
+          value={x.imagePath}
           onChange={(p) => set("imagePath", p)}
-          aspectClass={d.format === "landscape" ? "aspect-video max-w-[200px]" : "aspect-[4/5] max-w-[200px]"}
-          emptyLabel={d.placeholderLabel || "Nincs kép"}
+          aspectClass={x.format === "landscape" ? "aspect-video max-w-[200px]" : "aspect-[4/5] max-w-[200px]"}
+          emptyLabel={x.placeholderLabel || "Nincs kép"}
         />
         <Field label="Formátum">
           <div className="flex gap-2">
@@ -92,28 +103,29 @@ function NewsForm({ initial, onDone, isNew }: { initial: Draft; onDone: () => vo
               <button
                 key={f}
                 type="button"
+                disabled={locale === "en"}
                 onClick={() => set("format", f)}
                 className={`rounded-full px-4 py-2 text-xs font-extrabold uppercase tracking-widest ${
-                  d.format === f ? "bg-ink text-white" : "bg-white text-slate-500 hover:text-ink"
+                  x.format === f ? "bg-ink text-white" : "bg-white text-slate-500 hover:text-ink"
                 }`}
               >
                 {label}
               </button>
             ))}
-          </div>
+            </div>
         </Field>
       </div>
       <div className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-[180px_1fr]">
           <Field label="Dátum" htmlFor={fid("d")}>
-            <input id={fid("d")} type="date" className={inputCls} value={d.publishedOn} onChange={(e) => set("publishedOn", e.target.value)} />
+            <input id={fid("d")} type="date" className={inputCls} value={x.publishedOn} disabled={locale === "en"} onChange={(e) => set("publishedOn", e.target.value)} />
           </Field>
           <Field
             label="Webcím"
             htmlFor={fid("s")}
             hint={
               <>
-                A hír oldala: <span className="font-mono">/hirek/{d.slug || "…"}</span>. Üresen hagyva a címből készül. Csak kisbetű, szám, kötőjel.
+                A hír oldala: <span className="font-mono">/hirek/{x.slug || "…"}</span>. Üresen hagyva a címből készül. Csak kisbetű, szám, kötőjel.
                 {!isNew && saved.slug && (
                   <>
                     {" "}
@@ -128,30 +140,31 @@ function NewsForm({ initial, onDone, isNew }: { initial: Draft; onDone: () => vo
             <input
               id={fid("s")}
               className={`${inputCls} font-mono`}
-              value={d.slug}
+              value={x.slug}
+              disabled={locale === "en"}
               placeholder="pl. lia-visszater-girly-class"
               onChange={(e) => set("slug", e.target.value.toLowerCase().replace(/\s+/g, "-"))}
             />
           </Field>
         </div>
         <Field label="Cím" htmlFor={fid("t")}>
-          <input id={fid("t")} className={inputCls} value={d.title} onChange={(e) => set("title", e.target.value)} />
+          <input id={fid("t")} className={inputCls} value={x.title} onChange={(e) => set("title", e.target.value)} />
         </Field>
         <Field label="Rövid szöveg" htmlFor={fid("e")} hint="A hírkártya alatti bevezető mondat a hír saját oldalán.">
-          <textarea id={fid("e")} rows={3} className={textareaCls} value={d.excerpt} onChange={(e) => set("excerpt", e.target.value)} />
+          <textarea id={fid("e")} rows={3} className={textareaCls} value={x.excerpt} onChange={(e) => set("excerpt", e.target.value)} />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Kép leírása" htmlFor={fid("a")} hint="Képernyőolvasóknak és a plakát feliratához.">
-            <input id={fid("a")} className={inputCls} value={d.imageAlt} onChange={(e) => set("imageAlt", e.target.value)} />
+            <input id={fid("a")} className={inputCls} value={x.imageAlt} onChange={(e) => set("imageAlt", e.target.value)} />
           </Field>
           <Field label="Felirat kép helyett" htmlFor={fid("p")} hint="Ha nincs kép, ez látszik a szürke dobozban.">
-            <input id={fid("p")} className={inputCls} value={d.placeholderLabel} onChange={(e) => set("placeholderLabel", e.target.value)} />
+            <input id={fid("p")} className={inputCls} value={x.placeholderLabel} onChange={(e) => set("placeholderLabel", e.target.value)} />
           </Field>
         </div>
       </div>
       <div className="sm:col-span-2">
         <Field label="A hír teljes szövege" htmlFor={fid("b")} hint="Úgy szerkeszd, mint egy Word dokumentumot. Wordből vagy weboldalról is bemásolhatod a szöveget.">
-          <RichTextEditor id={fid("b")} value={d.bodyHtml} onChange={(html) => set("bodyHtml", html)} />
+          <RichTextEditor id={fid("b")} value={x.bodyHtml} onChange={(html) => set("bodyHtml", html)} />
         </Field>
       </div>
       <div className="sm:col-span-2">
@@ -194,10 +207,13 @@ function NewsForm({ initial, onDone, isNew }: { initial: Draft; onDone: () => vo
         </div>
       </div>
     </div>
+      );
+    }}
+    </LanguageEditor>
   );
 }
 
-export default function NewsEditor({ news, title, info }: { news: NewsItem[]; title: string; info: EditInfo }) {
+export default function NewsEditor({ news, title, info }: { news: NewsItem[]; title: NewsContent; info: EditInfo }) {
   const [creating, setCreating] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -260,6 +276,7 @@ export default function NewsEditor({ news, title, info }: { news: NewsItem[]; ti
                   <p className="font-mono text-[10px] font-bold text-md-teal">{n.dateLabel}</p>
                   <p className="truncate font-bold">{n.title}</p>
                   <p className="truncate text-xs text-slate-400">{n.excerpt}</p>
+                  {hasEnglishNews(n) && <span className="mt-1 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-widest text-emerald-800">EN</span>}
                 </div>
                 <span className="text-xs font-extrabold uppercase tracking-widest text-slate-400">{open ? "Bezár" : "Szerkeszt"}</span>
               </button>

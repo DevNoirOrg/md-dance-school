@@ -2,6 +2,7 @@
 import FadeIn from "./FadeIn";
 import HalftoneDots from "./HalftoneDots";
 import type { CoursesContent } from "@/lib/content-types";
+import { t, type Locale } from "@/lib/i18n";
 
 /* Tanfolyamok (az /orarend oldalon) — a szövegek az adminban szerkeszthetők. */
 
@@ -17,7 +18,8 @@ function GroupTitle({ kicker, title }: { kicker: string; title: string }) {
   );
 }
 
-export default function Tanfolyamok({ courses }: { courses: CoursesContent }) {
+export default function Tanfolyamok({ courses, locale = "hu" }: { courses: CoursesContent; locale?: Locale }) {
+  const copy = t(locale).courses;
   return (
     <section id="tanfolyamok" className="relative z-20 scroll-mt-24 bg-white px-4 pb-24 pt-8 sm:pb-32" style={{ overflowX: "clip" }}>
       <HalftoneDots className="hidden md:block" size={260} zIndex={0} style={{ top: "38%", left: -130 }} />
@@ -32,7 +34,7 @@ export default function Tanfolyamok({ courses }: { courses: CoursesContent }) {
         {/* 1) Stílusok */}
         {courses.styles.length > 0 && (
           <>
-            <GroupTitle kicker="Amit tanítunk" title="Stílusok" />
+            <GroupTitle kicker={copy.stylesKicker} title={copy.styles} />
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {courses.styles.map((c, i) => (
                 <FadeIn key={i} delay={(i % 3) * 0.08}>
@@ -42,7 +44,7 @@ export default function Tanfolyamok({ courses }: { courses: CoursesContent }) {
                     <p className="mt-3 flex-1 text-[15px] leading-relaxed text-gray-600">{c.text}</p>
                     {c.teachers.length > 0 && (
                       <div className="mt-5 flex flex-wrap items-center gap-2">
-                        <span className="text-[11px] font-extrabold uppercase tracking-widest text-gray-400">Tanár</span>
+                        <span className="text-[11px] font-extrabold uppercase tracking-widest text-gray-400">{copy.teacher}</span>
                         {c.teachers.map((t) => (
                           <span key={t} className="rounded-full bg-black px-3 py-1 text-xs font-bold text-white">
                             {t}
@@ -60,7 +62,7 @@ export default function Tanfolyamok({ courses }: { courses: CoursesContent }) {
         {/* 2) Mielőtt jössz */}
         {courses.steps.length > 0 && (
           <div className="mt-20 sm:mt-24">
-            <GroupTitle kicker="Első lépések" title="Mielőtt jössz" />
+            <GroupTitle kicker={copy.stepsKicker} title={copy.beforeYouCome} />
             <div className="grid gap-5 md:grid-cols-3">
               {courses.steps.map((c, i) => (
                 <FadeIn key={i} delay={i * 0.08}>
@@ -81,13 +83,13 @@ export default function Tanfolyamok({ courses }: { courses: CoursesContent }) {
             href="#jelentkezes"
             className="w-full rounded-xl bg-black px-7 py-4 text-center text-sm font-extrabold uppercase tracking-widest text-white transition-colors hover:bg-md-cyan hover:text-black sm:w-auto"
           >
-            Jelentkezem egy tanfolyamra
+            {copy.apply}
           </a>
           <a
             href="#orarend"
             className="w-full rounded-xl border-[3px] border-black px-7 py-[13px] text-center text-sm font-extrabold uppercase tracking-widest text-black transition-colors hover:border-md-cyan hover:bg-md-cyan sm:w-auto"
           >
-            Vissza az órarendhez
+            {copy.back}
           </a>
         </FadeIn>
       </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { saveCamp } from "@/app/actions/admin";
+import LanguageEditor from "@/components/admin/LanguageEditor";
 import ListEditor from "@/components/admin/ListEditor";
 import MediaField from "@/components/admin/MediaField";
 import { Card, Field, PageHeader, SaveBar, StringListEditor, inputCls, isSame, textareaCls, useSaver } from "@/components/admin/ui";
@@ -12,24 +13,25 @@ export default function CampEditor({ initial, teacherNames, info }: { initial: C
   const [saved, setSaved] = useState(initial);
   const [v, setV] = useState(initial);
   const { pending, status, save } = useSaver();
-  const set = <K extends keyof CampContent>(k: K, val: CampContent[K]) => setV((p) => ({ ...p, [k]: val }));
-  const setForm = (k: keyof CampContent["form"], val: string[]) => setV((p) => ({ ...p, form: { ...p.form, [k]: val } }));
-  const input = (k: "badge" | "title" | "meetingText" | "meetingTime" | "locationName" | "locationAddress" | "teacherRole", label: string, hint?: string) => (
-    <Field label={label} htmlFor={`camp-${k}`} hint={hint}>
-      <input id={`camp-${k}`} className={inputCls} value={v[k]} onChange={(e) => set(k, e.target.value)} />
-    </Field>
-  );
-  const area = (k: "lead" | "sub" | "priceIncludes" | "priceExcludes" | "endText" | "importantText" | "applyText", label: string, rows = 3) => (
-    <Field label={label} htmlFor={`camp-${k}`}>
-      <textarea id={`camp-${k}`} rows={rows} className={textareaCls} value={v[k]} onChange={(e) => set(k, e.target.value)} />
-    </Field>
-  );
-  // a már nem létező tanárnevek is látszanak (áthúzva), hogy ki lehessen venni őket
-  const allNames = [...teacherNames, ...v.teachers.filter((n) => !teacherNames.includes(n))];
-
   return (
     <div>
       <PageHeader title="Tánctábor" description="A /tanctabor oldal: fejléc, árak, turnusok, helyszín, tanárok és a jelentkezési űrlap opciói." />
+      <LanguageEditor value={v} onChange={setV}>
+      {(x, setX, locale) => {
+        const set = <K extends keyof CampContent>(key: K, value: CampContent[K]) => setX({ ...x, [key]: value });
+        const setForm = (key: keyof CampContent["form"], value: string[]) => setX({ ...x, form: { ...x.form, [key]: value } });
+        const input = (key: "badge" | "title" | "meetingText" | "meetingTime" | "locationName" | "locationAddress" | "teacherRole", label: string, hint?: string) => (
+          <Field label={label} htmlFor={`camp-${key}`} hint={hint}>
+            <input id={`camp-${key}`} className={inputCls} value={x[key]} onChange={(e) => set(key, e.target.value)} />
+          </Field>
+        );
+        const area = (key: "lead" | "sub" | "priceIncludes" | "priceExcludes" | "endText" | "importantText" | "applyText", label: string, rows = 3) => (
+          <Field label={label} htmlFor={`camp-${key}`}>
+            <textarea id={`camp-${key}`} rows={rows} className={textareaCls} value={x[key]} onChange={(e) => set(key, e.target.value)} />
+          </Field>
+        );
+        const allNames = [...teacherNames, ...x.teachers.filter((name) => !teacherNames.includes(name))];
+        return (
       <div className="space-y-6">
         <Card title="Fejléc">
           <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_220px]">
@@ -42,24 +44,24 @@ export default function CampEditor({ initial, teacherNames, info }: { initial: C
               {area("sub", "Második bekezdés (halványabb)")}
             </div>
             <Field label="Álló reel-videó (9:16)" hint="Ha nincs, szaggatott keretes helyőrző látszik.">
-              <MediaField kind="video" value={v.reelPath} onChange={(p) => set("reelPath", p)} aspectClass="aspect-[9/16] max-w-[200px]" />
+              <MediaField kind="video" value={x.reelPath} onChange={(p) => set("reelPath", p)} aspectClass="aspect-[9/16] max-w-[200px]" />
             </Field>
           </div>
         </Card>
 
         <Card title="Árak" description="Jegytípusok emojival, árral és hogy meddig érhető el.">
           <ListEditor
-            items={v.prices}
+            items={x.prices}
             onChange={(prices) => set("prices", prices)}
             newItem={() => ({ emoji: "", name: "", price: "", until: "" })}
-            title={(p) => `${p.emoji} ${p.name || "Új jegy"}`}
+            title={(p, index) => `${p.emoji} ${p.name || v.prices[index]?.name || "Új jegy"}`}
             addLabel="+ Új jegytípus"
             max={10}
             render={(p, upd) => (
               <div className="grid gap-2 sm:grid-cols-[70px_1fr_140px_1fr]">
-                <input aria-label="Emoji" className={`${inputCls} text-center`} value={p.emoji} onChange={(e) => upd({ emoji: e.target.value })} />
+                <input aria-label="Emoji" className={`${inputCls} text-center`} value={p.emoji} disabled={locale === "en"} onChange={(e) => upd({ emoji: e.target.value })} />
                 <input aria-label="Jegytípus" className={inputCls} placeholder="Early Ticket" value={p.name} onChange={(e) => upd({ name: e.target.value })} />
-                <input aria-label="Ár" className={inputCls} placeholder="84 990 Ft" value={p.price} onChange={(e) => upd({ price: e.target.value })} />
+                <input aria-label="Ár" className={inputCls} placeholder="84 990 Ft" value={p.price} disabled={locale === "en"} onChange={(e) => upd({ price: e.target.value })} />
                 <input aria-label="Elérhető" className={inputCls} placeholder="2026. május 31-ig" value={p.until} onChange={(e) => upd({ until: e.target.value })} />
               </div>
             )}
@@ -75,14 +77,14 @@ export default function CampEditor({ initial, teacherNames, info }: { initial: C
           description="A „Lezárva” turnus az űrlapon nem választható. Az állapot felirat (pl. „10 hely még elérhető”) a Szabad helyek résznél látszik."
         >
           <ListEditor
-            items={v.turnusok}
+            items={x.turnusok}
             onChange={(turnusok) => set("turnusok", turnusok)}
             newItem={() => {
-              let n = v.turnusok.length + 1;
-              while (v.turnusok.some((t) => t.id === `T${n}`)) n++;
-              return { id: `T${n}`, label: `${v.turnusok.length + 1}. turnus`, dates: "", days: "", closed: false, status: "" };
+              let n = x.turnusok.length + 1;
+              while (x.turnusok.some((turnus) => turnus.id === `T${n}`)) n++;
+              return { id: `T${n}`, label: `${x.turnusok.length + 1}. turnus`, dates: "", days: "", closed: false, status: "" };
             }}
-            title={(t) => t.label || "Új turnus"}
+            title={(t, index) => t.label || v.turnusok[index]?.label || "Új turnus"}
             addLabel="+ Új turnus"
             min={1}
             max={10}
@@ -96,7 +98,7 @@ export default function CampEditor({ initial, teacherNames, info }: { initial: C
                 <div className="flex flex-wrap items-center gap-3">
                   <input aria-label="Állapot" className={`${inputCls} max-w-xs`} placeholder="10 hely még elérhető" value={t.status} onChange={(e) => upd({ status: e.target.value })} />
                   <label className="flex cursor-pointer items-center gap-2 text-sm font-bold">
-                    <input type="checkbox" className="h-4 w-4 accent-md-teal" checked={t.closed} onChange={(e) => upd({ closed: e.target.checked })} />
+                    <input type="checkbox" className="h-4 w-4 accent-md-teal" checked={t.closed} disabled={locale === "en"} onChange={(e) => upd({ closed: e.target.checked })} />
                     Lezárva
                   </label>
                   <span className="ml-auto text-xs text-slate-400">
@@ -109,7 +111,7 @@ export default function CampEditor({ initial, teacherNames, info }: { initial: C
         </Card>
 
         <Card title="Befizetési módok" description="Egy sor = egy pont. „Cím: hosszabb szöveg” → a cím félkövér; a linkek kattinthatók; a sor végi [Hamarosan] szürke címke lesz.">
-          <StringListEditor items={v.paymentMethods} onChange={(paymentMethods) => set("paymentMethods", paymentMethods)} addLabel="+ Új befizetési mód" max={10} />
+          <StringListEditor items={x.paymentMethods} onChange={(paymentMethods) => set("paymentMethods", paymentMethods)} addLabel="+ Új befizetési mód" max={10} />
         </Card>
 
         <Card title="Időpontok és helyszín">
@@ -127,13 +129,14 @@ export default function CampEditor({ initial, teacherNames, info }: { initial: C
         <Card title="Tánctanáraink" description="Kattints a nevekre: a kiválasztottak jelennek meg (a kiválasztás sorrendjében). Fotó és videó link: Tanárok menüpont.">
           <div className="flex flex-wrap gap-2">
             {allNames.map((n) => {
-              const i = v.teachers.indexOf(n);
+              const i = x.teachers.indexOf(n);
               const missing = !teacherNames.includes(n);
               return (
                 <button
                   key={n}
                   type="button"
-                  onClick={() => set("teachers", i >= 0 ? v.teachers.filter((x) => x !== n) : [...v.teachers, n])}
+                  disabled={locale === "en"}
+                  onClick={() => set("teachers", i >= 0 ? x.teachers.filter((name) => name !== n) : [...x.teachers, n])}
                   className={`rounded-full px-4 py-2 text-sm font-bold transition-colors ${
                     i >= 0 ? "bg-ink text-white" : "bg-slate-100 text-slate-500 hover:text-ink"
                   } ${missing ? "line-through" : ""}`}
@@ -151,20 +154,23 @@ export default function CampEditor({ initial, teacherNames, info }: { initial: C
         <Card title="Jelentkezési űrlap opciói" description="A választható „chipek” az űrlapon (az első az alapértelmezett).">
           <div className="grid gap-6 md:grid-cols-2">
             <Field label="Pólóméretek">
-              <StringListEditor items={v.form.shirtSizes} onChange={(x) => setForm("shirtSizes", x)} addLabel="+ Új méret" />
+              <StringListEditor items={x.form.shirtSizes} onChange={(items) => setForm("shirtSizes", items)} addLabel="+ Új méret" />
             </Field>
             <Field label="Fizetési módok">
-              <StringListEditor items={v.form.payments} onChange={(x) => setForm("payments", x)} addLabel="+ Új fizetési mód" />
+              <StringListEditor items={x.form.payments} onChange={(items) => setForm("payments", items)} addLabel="+ Új fizetési mód" />
             </Field>
             <Field label="Honnan hallottál a táborról?">
-              <StringListEditor items={v.form.sources} onChange={(x) => setForm("sources", x)} addLabel="+ Új opció" max={15} />
+              <StringListEditor items={x.form.sources} onChange={(items) => setForm("sources", items)} addLabel="+ Új opció" max={15} />
             </Field>
             <Field label="Ki tölti ki?">
-              <StringListEditor items={v.form.fillers} onChange={(x) => setForm("fillers", x)} addLabel="+ Új opció" />
+              <StringListEditor items={x.form.fillers} onChange={(items) => setForm("fillers", items)} addLabel="+ Új opció" />
             </Field>
           </div>
         </Card>
       </div>
+        );
+      }}
+      </LanguageEditor>
       <SaveBar
         dirty={!isSame(v, saved)}
         pending={pending}

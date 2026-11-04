@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+[data-editing-locale="en"] input:not(:disabled)[value=""],
+[data-editing-locale="en"] textarea:not(:disabled):empty {
+  border-color: #fcd34d;
+  background-color: #fffbeb;
+}
+
 /* MD arculat (ugyanazok a színek és betűk, mint a stúdióbérlés és az MD Dance Company oldalon). */
 @theme inline {
   --color-md-cyan: #40cfd5;

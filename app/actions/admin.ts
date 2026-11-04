@@ -11,6 +11,7 @@ import { CONTENT_TAG } from "@/lib/content";
 import { db } from "@/lib/db";
 import { MEDIA_BUCKET, supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
+import type { CampContent, CoursesContent, FooterContent, FormOptions, NewsContent, PricesContent, ServicesContent, HeroContent, AboutContent, ScheduleSettings } from "@/lib/content-types";
 
 /*
   Az admin felület összes írási művelete. Mindegyik:
@@ -55,6 +56,11 @@ const url = (label = "Link") =>
     .refine((v) => v === "" || /^https?:\/\//.test(v), `${label}: http(s)://-sel kezdődjön.`);
 const mark = z.enum(["", "*", "**"]);
 const lines = (maxItems: number, maxLen = 120, label = "Sor") => z.array(required(maxLen, label)).max(maxItems);
+type TranslationData = string | TranslationData[] | { [key: string]: TranslationData };
+const translationValueSchema: z.ZodType<TranslationData> = z.lazy(() =>
+  z.union([z.string().max(200_000), z.array(translationValueSchema), z.record(z.string(), translationValueSchema)]),
+);
+const translationsSchema = z.record(z.string(), translationValueSchema);
 
 // ---------------------------------------------------------------------
 //  Feltöltés: egyszer használatos, közvetlen feltöltési link a Storage-ba
@@ -107,15 +113,15 @@ const servicesSchema = z.object({
   url: url("Az MD Dance Company oldal címe").refine((v) => v !== "", "Add meg az MD Dance Company oldal címét."),
   buttonLabel: required(60, "Gomb felirata"),
 });
-const textsSchema = z.object({ hero: heroSchema, about: aboutSchema, services: servicesSchema });
+const textsSchema = z.object({ hero: heroSchema, about: aboutSchema, services: servicesSchema, en: translationsSchema.optional() });
 
 export async function saveTexts(input: z.input<typeof textsSchema>) {
   return run(async (email) => {
-    const { hero, about, services } = textsSchema.parse(input);
+    const { hero, about, services, en } = textsSchema.parse(input);
     const [oldHero, oldAbout] = await Promise.all([getSetting("hero"), getSetting("about")]);
-    await saveSetting("hero", hero, email);
-    await saveSetting("about", about, email);
-    await saveSetting("services", services, email);
+    await saveSetting("hero", { ...hero, en: en?.hero } as HeroContent, email);
+    await saveSetting("about", { ...about, en: en?.about } as AboutContent, email);
+    await saveSetting("services", { ...services, en: en?.services } as ServicesContent, email);
     await touch("texts", email);
     if (oldHero.imagePath !== hero.imagePath) await removeMedia(oldHero.imagePath);
     if (oldAbout.imagePath !== about.imagePath) await removeMedia(oldAbout.imagePath);
@@ -129,11 +135,12 @@ export async function saveTexts(input: z.input<typeof textsSchema>) {
 const pricesSchema = z.object({
   items: z.array(z.object({ name: required(80, "Megnevezés"), price: required(30, "Ár"), note: mark })).max(40),
   notes: z.array(z.object({ mark, text: required(300, "Megjegyzés") })).max(8),
+  en: translationsSchema.optional(),
 });
 
 export async function savePrices(input: z.input<typeof pricesSchema>) {
   return run(async (email) => {
-    await saveSetting("prices", pricesSchema.parse(input), email);
+    await saveSetting("prices", pricesSchema.parse(input) as PricesContent, email);
     await touch("prices", email);
     updateTag(CONTENT_TAG);
   });
@@ -151,11 +158,12 @@ const coursesSchema = z.object({
   styles: z
     .array(z.object({ title: required(60, "Stílus neve"), text: text(1500, "Szöveg"), teachers: lines(8, 40, "Tanár") }))
     .max(20),
+  en: translationsSchema.optional(),
 });
 
 export async function saveCourses(input: z.input<typeof coursesSchema>) {
   return run(async (email) => {
-    await saveSetting("courses", coursesSchema.parse(input), email);
+    await saveSetting("courses", coursesSchema.parse(input) as CoursesContent, email);
     await touch("courses", email);
     updateTag(CONTENT_TAG);
   });
@@ -176,16 +184,18 @@ const roomSchema = z
     shortName: required(20, "Terem rövid neve"),
     headings: z.array(required(40, "Oszlopcím")).min(1, "Legalább egy oszlop kell.").max(4, "Legfeljebb 4 oszlop lehet."),
     columns: z.array(z.array(classSchema).max(20)).min(1).max(4),
+    en: translationsSchema.optional(),
   })
   .refine((r) => r.headings.length === r.columns.length, "Az oszlopok száma nem egyezik.");
 const scheduleSchema = z.object({
   hint: text(160, "Felirat"),
+  en: translationsSchema.optional(),
   rooms: z.array(roomSchema).min(1, "Legalább egy terem kell.").max(6),
 });
 
 export async function saveSchedule(input: z.input<typeof scheduleSchema>) {
   return run(async (email) => {
-    const { hint, rooms } = scheduleSchema.parse(input);
+    const { hint, rooms, en } = scheduleSchema.parse(input);
     await db().begin(async (tx) => {
       const keepIds = rooms.map((r) => r.id).filter((id): id is string => !!id);
       if (keepIds.length) await tx`delete from mdschool.rooms where id <> all(${keepIds}::uuid[])`;
@@ -193,10 +203,10 @@ export async function saveSchedule(input: z.input<typeof scheduleSchema>) {
       for (const [sort, room] of rooms.entries()) {
         const id = room.id ?? randomUUID();
         await tx`
-          insert into mdschool.rooms (id, name, short_name, column_headings, sort, updated_at, updated_by)
-          values (${id}, ${room.name}, ${room.shortName}, ${room.headings}, ${sort}, now(), ${email})
+          insert into mdschool.rooms (id, name, short_name, column_headings, translations, sort, updated_at, updated_by)
+          values (${id}, ${room.name}, ${room.shortName}, ${room.headings}, ${db().json(room.en ?? {})}, ${sort}, now(), ${email})
           on conflict (id) do update set name = excluded.name, short_name = excluded.short_name,
-            column_headings = excluded.column_headings, sort = excluded.sort,
+            column_headings = excluded.column_headings, translations = excluded.translations, sort = excluded.sort,
             updated_at = now(), updated_by = excluded.updated_by`;
         // Az órák azonosítója megmarad (a böngészőben épp kiválasztott órák így érvényesek maradnak).
         await tx`delete from mdschool.classes where room_id = ${id}`;
@@ -209,7 +219,7 @@ export async function saveSchedule(input: z.input<typeof scheduleSchema>) {
       }
     });
     const old = await getSetting("schedule");
-    await saveSetting("schedule", { ...old, hint }, email);
+    await saveSetting("schedule", { ...old, hint, en: { ...old.en, hint: en?.hint } } as ScheduleSettings, email);
     await touch("schedule", email);
     updateTag(CONTENT_TAG);
   });
@@ -227,6 +237,7 @@ const teachersSchema = z.object({
         style: text(80, "Stílus"),
         imagePath: mediaPath,
         videoUrl: url("Instagram-videó link"),
+        en: translationsSchema.optional(),
       }),
     )
     .max(40),
@@ -241,8 +252,8 @@ export async function saveTeachers(input: z.input<typeof teachersSchema>) {
     await db().begin(async (tx) => {
       await tx`delete from mdschool.teachers`;
       for (const [sort, t] of teachers.entries()) {
-        await tx`insert into mdschool.teachers (id, name, style, image_path, video_url, sort)
-                 values (${t.id ?? randomUUID()}, ${t.name}, ${t.style}, ${t.imagePath}, ${t.videoUrl}, ${sort})`;
+        await tx`insert into mdschool.teachers (id, name, style, image_path, video_url, translations, sort)
+                 values (${t.id ?? randomUUID()}, ${t.name}, ${t.style}, ${t.imagePath}, ${t.videoUrl}, ${db().json(t.en ?? {})}, ${sort})`;
       }
     });
     // Átnevezett tanár: a tánctábor tanárlistájában is átírjuk a nevét.
@@ -267,11 +278,11 @@ export async function saveTeachers(input: z.input<typeof teachersSchema>) {
 //  Hírek — a szekció címe (főoldal) + az egyes hírek (saját mdschool.news
 //  tábla, mindegyik külön menthető/törölhető, saját /hirek/<slug> oldala van)
 // ---------------------------------------------------------------------
-const newsTitleSchema = z.object({ title: required(60, "Cím") });
+const newsTitleSchema = z.object({ title: required(60, "Cím"), en: translationsSchema.optional() });
 
 export async function saveNewsTitle(input: z.input<typeof newsTitleSchema>) {
   return run(async (email) => {
-    await saveSetting("news", newsTitleSchema.parse(input), email);
+    await saveSetting("news", newsTitleSchema.parse(input) as NewsContent, email);
     await touch("news", email);
     updateTag(CONTENT_TAG);
   });
@@ -316,32 +327,40 @@ const newsSchema = z.object({
   imageAlt: text(200, "Kép leírása"),
   placeholderLabel: text(30, "Helyőrző felirat"),
   format: z.enum(["landscape", "portrait"]),
+  en: z.object({
+    title: text(160, "English title"),
+    excerpt: text(400, "English short text"),
+    bodyHtml: z.string().max(200_000, "The English news content is too long."),
+    imageAlt: text(200, "English image description"),
+    placeholderLabel: text(30, "English placeholder label"),
+  }).partial().optional(),
 });
 
 export async function saveNews(input: z.input<typeof newsSchema>) {
   return run(async (email) => {
     const n = newsSchema.parse(input);
     const body = sanitizeNewsHtml(n.bodyHtml);
+    const translatedBody = sanitizeNewsHtml(n.en?.bodyHtml ?? "");
     let oldImage: string | null = null;
     let oldBody = "";
     let id = n.id;
     const slug = await uniqueNewsSlug(n.slug, n.title, id);
     if (id) {
-      const [old] = await db()<{ image_path: string | null; body_html: string }[]>`
-        select image_path, body_html from mdschool.news where id = ${id}`;
+      const [old] = await db()<{ image_path: string | null; body_html: string; translations: { bodyHtml?: string } }[]>`
+        select image_path, body_html, translations from mdschool.news where id = ${id}`;
       if (!old) return fail("Ez a hír időközben törölve lett.");
       oldImage = old.image_path;
-      oldBody = old.body_html;
+      oldBody = `${old.body_html}\n${old.translations?.bodyHtml ?? ""}`;
       await db()`update mdschool.news set published_on = ${n.publishedOn}, slug = ${slug}, title = ${n.title},
         excerpt = ${n.excerpt}, body_html = ${body}, image_path = ${n.imagePath}, image_alt = ${n.imageAlt || null},
-        placeholder_label = ${n.placeholderLabel}, format = ${n.format},
+        placeholder_label = ${n.placeholderLabel}, format = ${n.format}, translations = ${db().json({ ...n.en, bodyHtml: translatedBody })},
         updated_at = now(), updated_by = ${email} where id = ${id}`;
     } else {
       id = randomUUID();
       await db()`insert into mdschool.news
-        (id, published_on, slug, title, excerpt, body_html, image_path, image_alt, placeholder_label, format, updated_by)
+        (id, published_on, slug, title, excerpt, body_html, image_path, image_alt, placeholder_label, format, translations, updated_by)
         values (${id}, ${n.publishedOn}, ${slug}, ${n.title}, ${n.excerpt}, ${body}, ${n.imagePath},
-          ${n.imageAlt || null}, ${n.placeholderLabel}, ${n.format}, ${email})`;
+          ${n.imageAlt || null}, ${n.placeholderLabel}, ${n.format}, ${db().json({ ...n.en, bodyHtml: translatedBody })}, ${email})`;
     }
     if (oldImage && oldImage !== n.imagePath) await removeMedia(oldImage);
     // a szövegből kikerült feltöltött képek törlése
@@ -355,10 +374,11 @@ export async function saveNews(input: z.input<typeof newsSchema>) {
 
 export async function deleteNews(id: string) {
   return run(async (email) => {
-    const rows = await db()<{ image_path: string | null; body_html: string }[]>`
-      delete from mdschool.news where id = ${z.string().uuid().parse(id)} returning image_path, body_html`;
+    const rows = await db()<{ image_path: string | null; body_html: string; translations: { bodyHtml?: string } }[]>`
+      delete from mdschool.news where id = ${z.string().uuid().parse(id)} returning image_path, body_html, translations`;
     await removeMedia(rows[0]?.image_path);
     for (const p of bodyMediaPaths(rows[0]?.body_html ?? "")) await removeMedia(p);
+    for (const p of bodyMediaPaths(rows[0]?.translations?.bodyHtml ?? "")) await removeMedia(p);
     await touch("news", email);
     updateTag(CONTENT_TAG);
   });
@@ -407,11 +427,12 @@ const campSchema = z.object({
     sources: lines(15, 80, "Honnan hallott").min(1, "Legalább egy „honnan hallott” opció kell."),
     fillers: lines(10, 80, "Kitöltő").min(1, "Legalább egy kitöltő opció kell."),
   }),
+  en: translationsSchema.optional(),
 });
 
 export async function saveCamp(input: z.input<typeof campSchema>) {
   return run(async (email) => {
-    const value = campSchema.parse(input);
+    const value = campSchema.parse(input) as CampContent;
     const ids = value.turnusok.map((t) => t.id);
     if (new Set(ids).size !== ids.length) return fail("Két turnusnak nem lehet ugyanaz az azonosítója.");
     const old = await getSetting("camp");
@@ -428,11 +449,12 @@ export async function saveCamp(input: z.input<typeof campSchema>) {
 const formOptionsSchema = z.object({
   experience: lines(12, 80, "Opció").min(1, "Legalább egy „Táncoltál már?” opció kell."),
   start: lines(12, 80, "Opció").min(1, "Legalább egy „Mikortól kezdenél?” opció kell."),
+  en: translationsSchema.optional(),
 });
 
 export async function saveFormOptions(input: z.input<typeof formOptionsSchema>) {
   return run(async (email) => {
-    await saveSetting("form_options", formOptionsSchema.parse(input), email);
+    await saveSetting("form_options", formOptionsSchema.parse(input) as FormOptions, email);
     await touch("form_options", email);
     updateTag(CONTENT_TAG);
   });
@@ -451,11 +473,12 @@ const footerSchema = z.object({
   addressLabel: text(60, "Cím felirata"),
   address: text(400, "Cím"),
   socials: z.array(z.object({ label: z.enum(["Instagram", "Facebook", "YouTube", "TikTok"]), href: url() })).max(4),
+  en: translationsSchema.optional(),
 });
 
 export async function saveFooter(input: z.input<typeof footerSchema>) {
   return run(async (email) => {
-    await saveSetting("footer", footerSchema.parse(input), email);
+    await saveSetting("footer", footerSchema.parse(input) as FooterContent, email);
     await touch("footer", email);
     updateTag(CONTENT_TAG);
   });

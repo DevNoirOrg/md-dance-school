@@ -1,6 +1,7 @@
 "use client";
 import type { ReactNode } from "react";
 import { PRIVACY_URL } from "@/lib/privacy";
+import { t, type Locale } from "@/lib/i18n";
 
 /*
   A két kötelező adatkezelési jelölőnégyzet — minden űrlapon ugyanaz
@@ -12,13 +13,15 @@ export type ConsentKey = keyof Consents;
 export const emptyConsents: Consents = { tajekoztato: false, adatkezeles: false };
 
 export const CONSENT_ERRORS: Record<ConsentKey, string> = {
-  tajekoztato: "Az elküldéshez el kell fogadnod az Adatkezelési tájékoztatót.",
-  adatkezeles: "Az elküldéshez hozzá kell járulnod az adataid kezeléséhez.",
+  tajekoztato: t("hu").form.consentPrivacy,
+  adatkezeles: t("hu").form.consentData,
 };
 
-export function consentErrors(values: Consents): Partial<Record<ConsentKey, string>> {
+export function consentErrors(values: Consents, locale: Locale = "hu"): Partial<Record<ConsentKey, string>> {
   const e: Partial<Record<ConsentKey, string>> = {};
-  for (const k of Object.keys(CONSENT_ERRORS) as ConsentKey[]) if (!values[k]) e[k] = CONSENT_ERRORS[k];
+  for (const k of Object.keys(CONSENT_ERRORS) as ConsentKey[]) {
+    if (!values[k]) e[k] = k === "tajekoztato" ? t(locale).form.consentPrivacy : t(locale).form.consentData;
+  }
   return e;
 }
 
@@ -36,6 +39,7 @@ export default function ConsentChecks({
   showErrors = false,
   idPrefix = "consent",
   className = "",
+  locale = "hu",
 }: {
   values: Consents;
   onChange: (key: ConsentKey, checked: boolean) => void;
@@ -44,27 +48,29 @@ export default function ConsentChecks({
   /** egyedi azonosító-előtag, ha egy oldalon több űrlap is van */
   idPrefix?: string;
   className?: string;
+  locale?: Locale;
 }) {
+  const copy = t(locale).form;
   const items: { key: ConsentKey; label: ReactNode }[] = [
     {
       key: "tajekoztato",
       label: (
         <>
-          Elolvastam és elfogadom az{" "}
+          {copy.privacyRead}{" "}
           <a
-            href={PRIVACY_URL}
+            href={locale === "en" ? "/en/privacy" : PRIVACY_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="underline underline-offset-2 hover:text-md-deep"
             onClick={(e) => e.stopPropagation()}
           >
-            Adatkezelési tájékoztatóban
+            {copy.privacyLink}
           </a>{" "}
-          foglaltakat.
+          {copy.privacyEnd}
         </>
       ),
     },
-    { key: "adatkezeles", label: "Hozzájárulok a fenti adataim Adatkezelő által történő kezeléséhez." },
+    { key: "adatkezeles", label: copy.consentText },
   ];
 
   return (

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { saveTeachers } from "@/app/actions/admin";
+import LanguageEditor from "@/components/admin/LanguageEditor";
 import ListEditor from "@/components/admin/ListEditor";
 import MediaField from "@/components/admin/MediaField";
 import { Card, Field, PageHeader, SaveBar, inputCls, isSame, useSaver } from "@/components/admin/ui";
@@ -15,6 +16,9 @@ export default function TeachersEditor({ initial, info }: { initial: Teacher[]; 
   const [v, setV] = useState<Draft[]>(initial);
   const [error, setError] = useState<string | null>(null);
   const { pending, status, save } = useSaver();
+  const languageValue = { teachers: v, en: { teachers: v.map((teacher) => teacher.en ?? {}) } };
+  const updateLanguageValue = (value: typeof languageValue) =>
+    setV(value.teachers.map((teacher, index) => ({ ...teacher, en: value.en.teachers[index] as Teacher["en"] })));
 
   return (
     <div>
@@ -22,12 +26,14 @@ export default function TeachersEditor({ initial, info }: { initial: Teacher[]; 
         title="Tanárok"
         description="A főoldal „Tanáraink” íve ebben a sorrendben jelenik meg (a középső kártya áll elöl). A tánctábor oldalon a Tánctábor menüpontban választhatod ki, kik szerepeljenek."
       />
+      <LanguageEditor value={languageValue} onChange={updateLanguageValue}>
+      {(x, setX, locale) => (
       <Card>
         <ListEditor
-          items={v}
-          onChange={setV}
+          items={x.teachers}
+          onChange={(teachers) => setX({ ...x, teachers })}
           newItem={() => ({ name: "", style: "", imagePath: null, videoUrl: "" })}
-          title={(t) => t.name || "Új tanár"}
+          title={(t, index) => t.name || v[index]?.name || "Új tanár"}
           addLabel="+ Új tanár"
           max={40}
           render={(t, set) => (
@@ -41,13 +47,15 @@ export default function TeachersEditor({ initial, info }: { initial: Teacher[]; 
                   <input className={inputCls} value={t.style} placeholder="Hip-Hop, House" onChange={(e) => set({ style: e.target.value })} />
                 </Field>
                 <Field label="Instagram-videó link" hint="A kártyára kattintva ez nyílik meg új lapon. Üresen hagyva nincs „Videó” jelzés.">
-                  <input className={inputCls} value={t.videoUrl} placeholder="https://www.instagram.com/reel/…" onChange={(e) => set({ videoUrl: e.target.value })} />
+                  <input className={inputCls} value={t.videoUrl} disabled={locale === "en"} placeholder="https://www.instagram.com/reel/…" onChange={(e) => set({ videoUrl: e.target.value })} />
                 </Field>
               </div>
             </div>
           )}
         />
       </Card>
+      )}
+      </LanguageEditor>
       {error && <p className="mt-4 text-sm font-bold text-red-600">{error}</p>}
       <SaveBar
         dirty={!isSame(v, saved)}

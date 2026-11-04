@@ -6,25 +6,35 @@
 
 export type Mark = "" | "*" | "**";
 
-export type HeroContent = {
+export type DeepPartial<T> = T extends string | number | boolean | null
+  ? T
+  : T extends (infer U)[]
+    ? DeepPartial<U>[]
+    : T extends object
+      ? { [K in keyof T]?: DeepPartial<T[K]> }
+      : T;
+
+export type Localized<T> = T & { en?: DeepPartial<T> };
+
+export type HeroContent = Localized<{
   /** A nagy, Anton betűs cím (pl. „WELCOME TO MD”). */
   title: string;
   /** A cím alatti, fehér dobozos bemutatkozó mondat. */
   lead: string;
   /** Háttérkép: "/canva/hero-crowd.jpg" (public mappa) vagy Storage útvonal. */
   imagePath: string;
-};
+}>;
 
-export type AboutContent = {
+export type AboutContent = Localized<{
   titleLine1: string;
   titleLine2: string;
   /** Bekezdések, üres sorral elválasztva. */
   paragraphs: string;
   imagePath: string;
   imageAlt: string;
-};
+}>;
 
-export type ServicesContent = {
+export type ServicesContent = Localized<{
   heroTitle: string;
   heroLead: string;
   kicker: string;
@@ -34,27 +44,27 @@ export type ServicesContent = {
   /** Az MD Dance Company oldal címe. */
   url: string;
   buttonLabel: string;
-};
+}>;
 
 export type PriceItem = { name: string; price: string; note: Mark };
 export type PriceNote = { mark: Mark; text: string };
-export type PricesContent = { items: PriceItem[]; notes: PriceNote[] };
+export type PricesContent = Localized<{ items: PriceItem[]; notes: PriceNote[] }>;
 
-export type CoursesContent = {
+export type CoursesContent = Localized<{
   heroTitle: string;
   heroLead: string;
   title: string;
   intro: string;
   steps: { title: string; text: string }[];
   styles: { title: string; text: string; teachers: string[] }[];
-};
+}>;
 
-export type ScheduleSettings = {
+export type ScheduleSettings = Localized<{
   /** Az órarend cím-dobozában lévő kis felirat. */
   hint: string;
-};
+}>;
 
-export type NewsItem = {
+export type NewsItem = Localized<{
   id: string;
   /** A hír saját oldala: /hirek/<slug>. */
   slug: string;
@@ -75,13 +85,13 @@ export type NewsItem = {
   excerpt: string;
   /** A hír teljes szövege (szerveroldalon megtisztított HTML). */
   bodyHtml: string;
-};
+}>;
 /** A hírek szekció címe a főoldalon (a hírek listája már a mdschool.news táblából jön). */
-export type NewsContent = { title: string };
+export type NewsContent = Localized<{ title: string }>;
 
 export type CampPrice = { emoji: string; name: string; price: string; until: string };
 export type CampTurnus = { id: string; label: string; dates: string; days: string; closed: boolean; status: string };
-export type CampContent = {
+export type CampContent = Localized<{
   badge: string;
   title: string;
   lead: string;
@@ -110,25 +120,25 @@ export type CampContent = {
     sources: string[];
     fillers: string[];
   };
-};
+}>;
 
 export type SocialLink = { label: "Instagram" | "Facebook" | "YouTube" | "TikTok"; href: string };
-export type FooterContent = {
+export type FooterContent = Localized<{
   email: string;
   phone: string;
   addressLabel: string;
   address: string;
   socials: SocialLink[];
-};
+}>;
 
-export type FormOptions = {
+export type FormOptions = Localized<{
   /** „Táncoltál már korábban?” */
   experience: string[];
   /** „Mikortól kezdenél?” */
   start: string[];
-};
+}>;
 
-export type PrivacyContent = { text: string };
+export type PrivacyContent = Localized<{ text: string }>;
 
 export type SettingsMap = {
   hero: HeroContent;
@@ -155,19 +165,19 @@ export type ClassItem = {
   full: string;
 };
 
-export type Room = {
+export type Room = Localized<{
   id: string;
   name: string;
   shortName: string;
   /** 1–4 oszlop (pl. „Hétfő - Szerda”), mindegyikben az órák. */
   columns: { heading: string; classes: ClassItem[] }[];
-};
+}>;
 
-export type Teacher = {
+export type Teacher = Localized<{
   id: string;
   name: string;
   style: string;
   imagePath: string;
   /** Instagram-videó linkje (a kártyára kattintva nyílik meg). */
   videoUrl: string;
-};
+}>;

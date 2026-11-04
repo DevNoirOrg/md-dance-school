@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import InstaCard from "./InstaCard";
 import type { Teacher } from "@/lib/content-types";
 import { mediaUrl } from "@/lib/format";
+import { t, type Locale } from "@/lib/i18n";
 
 // A tánctanár IG-kártyák — ugyanaz az InstaCard, mint a Rólunk szekcióban.
 // A tanárok adatai (név, stílus, fotó, Insta-videó link) az adminban szerkeszthetők.
@@ -37,7 +38,8 @@ const mobileDots: Dot[] = [
 
 type Drag = { active: boolean; startX: number; startY: number; startOffset: number; video: string | null };
 
-export default function Teachers({ teachers }: { teachers: Teacher[] }) {
+export default function Teachers({ teachers, locale = "hu" }: { teachers: Teacher[]; locale?: Locale }) {
+  const copy = t(locale).teachers;
   const N = teachers.length;
   // a relatív pozíciót a [-N/2, N/2] tartományba írja (végtelen körforgás)
   const wrap = (x: number) => (N ? x - N * Math.round(x / N) : 0);
@@ -197,7 +199,7 @@ export default function Teachers({ teachers }: { teachers: Teacher[] }) {
                 rel="noopener noreferrer"
                 data-video={t.videoUrl || undefined}
                 draggable={false}
-                aria-label={`${t.name} (${t.style}) táncvideója az Instagramon`}
+                aria-label={locale === "en" ? `${t.name} (${t.style}) dance video on Instagram` : `${t.name} (${t.style}) táncvideója az Instagramon`}
                 onClick={(e) => {
                   // egér/touch kattintást a pointerup kezeli; csak billentyűs aktiválás (detail 0) mehet át
                   if (e.detail !== 0) e.preventDefault();
@@ -232,7 +234,7 @@ export default function Teachers({ teachers }: { teachers: Teacher[] }) {
           </defs>
           <text fill="#ffffff" style={{ fontFamily: "var(--font-anton), sans-serif", fontSize: 76, letterSpacing: 2 }}>
             <textPath href="#tanarArc" startOffset="50%" textAnchor="middle">
-              TANÁRAINK
+              {copy.title.toUpperCase()}
             </textPath>
           </text>
         </svg>

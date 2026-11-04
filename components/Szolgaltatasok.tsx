@@ -5,6 +5,7 @@ import { useRef } from "react";
 import HalftoneDots from "./HalftoneDots";
 import PageHero from "./PageHero";
 import type { ServicesContent } from "@/lib/content-types";
+import { t, type Locale } from "@/lib/i18n";
 
 /* ──────────────────────────────────────────────────────────────
    Szolgáltatások oldal — az MD Dance Company oldal nagy előnézete
@@ -25,7 +26,7 @@ const hostOf = (url: string) => {
   }
 };
 
-export function SzolgaltatasokHero({ services }: { services: ServicesContent }) {
+export function SzolgaltatasokHero({ services, locale = "hu" }: { services: ServicesContent; locale?: Locale }) {
   return (
     <PageHero
       title={services.heroTitle}
@@ -34,12 +35,13 @@ export function SzolgaltatasokHero({ services }: { services: ServicesContent }) 
       position="center 40%"
       overlay="linear-gradient(0deg, rgba(0,0,0,0.78), rgba(0,0,0,0.5))"
       className="min-h-[420px] pb-28 sm:min-h-[480px]"
+      locale={locale}
       dots
     />
   );
 }
 
-export function CompanyPreview({ services }: { services: ServicesContent }) {
+export function CompanyPreview({ services, locale = "hu" }: { services: ServicesContent; locale?: Locale }) {
   const ref = useRef<HTMLAnchorElement>(null)
   const inView = useInView(ref, { once: true, margin: '-60px' })
 
@@ -54,7 +56,7 @@ export function CompanyPreview({ services }: { services: ServicesContent }) {
           href={services.url}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Az MD Dance Company weboldalának megnyitása új lapon"
+          aria-label={t(locale).services.preview}
           initial={{ opacity: 0, y: 40 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
@@ -119,7 +121,7 @@ export function CompanyPreview({ services }: { services: ServicesContent }) {
             {/* Hover-felirat */}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-5 opacity-0 transition-opacity duration-300 group-hover:opacity-100 sm:p-7">
               <span className="flex items-center gap-2 rounded-full bg-[#40CFD5] px-5 py-2.5 text-xs font-extrabold uppercase tracking-widest text-black shadow-xl">
-                Megnyitás <ArrowUpRight className="h-4 w-4" strokeWidth={2.5} />
+                {t(locale).services.open} <ArrowUpRight className="h-4 w-4" strokeWidth={2.5} />
               </span>
             </div>
           </div>

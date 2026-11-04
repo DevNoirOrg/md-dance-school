@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useEditingLocale } from "./LanguageEditorContext";
 import { Button, IconButton } from "./ui";
 
 /*
@@ -28,6 +29,7 @@ export default function ListEditor<T>({
   max?: number;
   min?: number;
 }) {
+  const readOnlyStructure = useEditingLocale() === "en";
   const [drag, setDrag] = useState<number | null>(null);
   const [over, setOver] = useState<number | null>(null);
 
@@ -61,13 +63,13 @@ export default function ListEditor<T>({
         >
           <div className="mb-3 flex items-center gap-2">
             <span
-              draggable
+              draggable={!readOnlyStructure}
               onDragStart={() => setDrag(i)}
               onDragEnd={() => {
                 setDrag(null);
                 setOver(null);
               }}
-              className="cursor-grab select-none px-1 text-slate-300"
+              className={`${readOnlyStructure ? "cursor-default opacity-30" : "cursor-grab"} select-none px-1 text-slate-300`}
               title="Húzd az átrendezéshez"
             >
               ⋮⋮
@@ -75,15 +77,15 @@ export default function ListEditor<T>({
             <span className="min-w-0 flex-1 truncate text-xs font-extrabold uppercase tracking-widest text-slate-400">
               {title ? title(item, i) : `${i + 1}.`}
             </span>
-            <IconButton label="Feljebb" onClick={() => move(i, i - 1)} disabled={i === 0}>
+            <IconButton label="Feljebb" onClick={() => move(i, i - 1)} disabled={readOnlyStructure || i === 0}>
               ↑
             </IconButton>
-            <IconButton label="Lejjebb" onClick={() => move(i, i + 1)} disabled={i === items.length - 1}>
+            <IconButton label="Lejjebb" onClick={() => move(i, i + 1)} disabled={readOnlyStructure || i === items.length - 1}>
               ↓
             </IconButton>
             <IconButton
               label="Törlés"
-              disabled={items.length <= min}
+              disabled={readOnlyStructure || items.length <= min}
               onClick={() => onChange(items.filter((_, j) => j !== i))}
               className="hover:!bg-red-50 hover:!text-red-600"
             >
@@ -94,7 +96,7 @@ export default function ListEditor<T>({
         </div>
       ))}
       {items.length < max && (
-        <Button variant="ghost" onClick={() => onChange([...items, newItem()])}>
+        <Button variant="ghost" disabled={readOnlyStructure} onClick={() => onChange([...items, newItem()])}>
           {addLabel}
         </Button>
       )}

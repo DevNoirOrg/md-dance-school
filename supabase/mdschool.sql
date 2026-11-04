@@ -55,6 +55,7 @@ create table if not exists mdschool.rooms (
   name            text not null,
   short_name      text not null,
   column_headings text[] not null check (array_length(column_headings, 1) between 1 and 4),
+  translations    jsonb not null default '{}'::jsonb,
   sort            integer not null default 0,
   updated_at      timestamptz not null default now(),
   updated_by      text
@@ -79,6 +80,7 @@ create table if not exists mdschool.teachers (
   style      text not null default '',
   image_path text not null,
   video_url  text not null default '',
+  translations jsonb not null default '{}'::jsonb,
   sort       integer not null default 0
 );
 
@@ -93,6 +95,7 @@ create table if not exists mdschool.applications (
   vezeteknev        text not null,
   keresztnev        text not null,
   email             text not null,
+  language          text not null default 'hu' check (language in ('hu', 'en')),
   szuletes          date not null,
   szulo_nev         text,
   szulo_email       text,
@@ -130,6 +133,7 @@ create table if not exists mdschool.camp_applications (
   fizetes           text not null default '',
   honnan            text not null default '',
   kitolto           text not null default '',
+  language          text not null default 'hu' check (language in ('hu', 'en')),
   consent_at        timestamptz not null,
   ip_hash           text,
   admin_note        text not null default '',

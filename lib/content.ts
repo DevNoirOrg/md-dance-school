@@ -33,6 +33,7 @@ export function buildRooms(raw: RawRoom[]): Room[] {
     id: r.id,
     name: r.name,
     shortName: r.shortName,
+    en: r.en,
     columns: r.columns.map((col) => ({
       heading: col.heading,
       classes: col.classes.map((c) => ({
@@ -48,8 +49,8 @@ export function buildRooms(raw: RawRoom[]): Room[] {
 
 export async function readRooms(): Promise<Room[]> {
   if (!hasDb()) return buildRooms(defaultRawRooms);
-  const rooms = await db()<{ id: string; name: string; short_name: string; column_headings: string[] }[]>`
-    select id, name, short_name, column_headings from mdschool.rooms order by sort, name`;
+  const rooms = await db()<{ id: string; name: string; short_name: string; column_headings: string[]; translations: Room["en"] }[]>`
+    select id, name, short_name, column_headings, translations from mdschool.rooms order by sort, name`;
   const classes = await db()<{ id: string; room_id: string; col: number; time: string; title: string }[]>`
     select id, room_id, col, time, title from mdschool.classes order by col, sort`;
   return buildRooms(
@@ -57,6 +58,7 @@ export async function readRooms(): Promise<Room[]> {
       id: r.id,
       name: r.name,
       shortName: r.short_name,
+      en: r.translations,
       columns: r.column_headings.map((heading, col) => ({
         heading,
         classes: classes.filter((c) => c.room_id === r.id && c.col === col),
@@ -67,9 +69,9 @@ export async function readRooms(): Promise<Room[]> {
 
 export async function readTeachers(): Promise<Teacher[]> {
   if (!hasDb()) return defaultTeachers;
-  const rows = await db()<{ id: string; name: string; style: string; image_path: string; video_url: string }[]>`
-    select id, name, style, image_path, video_url from mdschool.teachers order by sort, name`;
-  return rows.map((r) => ({ id: r.id, name: r.name, style: r.style, imagePath: r.image_path, videoUrl: r.video_url }));
+  const rows = await db()<{ id: string; name: string; style: string; image_path: string; video_url: string; translations: Teacher["en"] }[]>`
+    select id, name, style, image_path, video_url, translations from mdschool.teachers order by sort, name`;
+  return rows.map((r) => ({ id: r.id, name: r.name, style: r.style, imagePath: r.image_path, videoUrl: r.video_url, en: r.translations }));
 }
 
 export async function readNews(): Promise<NewsItem[]> {
@@ -86,9 +88,10 @@ export async function readNews(): Promise<NewsItem[]> {
       image_alt: string | null;
       placeholder_label: string;
       format: "landscape" | "portrait";
+      translations: NewsItem["en"];
     }[]
   >`
-    select id, published_on, slug, title, excerpt, body_html, image_path, image_alt, placeholder_label, format
+    select id, published_on, slug, title, excerpt, body_html, image_path, image_alt, placeholder_label, format, translations
     from mdschool.news order by published_on desc, created_at desc`;
   return rows.map((r) => ({
     id: r.id,
@@ -102,6 +105,7 @@ export async function readNews(): Promise<NewsItem[]> {
     imageAlt: r.image_alt ?? "",
     placeholderLabel: r.placeholder_label,
     format: r.format,
+    en: r.translations,
   }));
 }
 

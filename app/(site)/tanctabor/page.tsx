@@ -11,6 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: `${camp.title.charAt(0)}${camp.title.slice(1).toLowerCase()} – MD Dance School`,
     description: `MD nyári tánctábor: ${camp.locationName}. Tánc, wellness, sport és közösség. Árak, időpontok, jelentkezés.`,
+    alternates: { canonical: "/tanctabor", languages: { hu: "/tanctabor", en: "/en/camp" } },
   };
 }
 

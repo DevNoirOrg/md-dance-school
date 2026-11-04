@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import { getNewsPage, getSiteContent, readNews } from "@/lib/content";
 import { mediaUrl } from "@/lib/format";
+import { hasEnglishNews } from "@/lib/localize";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -23,6 +24,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${item.title} – MD Dance School`,
     description: item.excerpt || item.title,
+    alternates: {
+      canonical: `/hirek/${slug}`,
+      languages: hasEnglishNews(item)
+        ? { hu: `/hirek/${slug}`, en: `/en/news/${slug}` }
+        : { hu: `/hirek/${slug}` },
+    },
   };
 }
 
@@ -30,10 +37,11 @@ export default async function NewsArticlePage({ params }: Props) {
   const { slug } = await params;
   const [item, { settings }] = await Promise.all([getNewsPage(decodeURIComponent(slug)), getSiteContent()]);
   if (!item) notFound();
+  const alternateHref = hasEnglishNews(item) ? `/en/news/${slug}` : "/en/news";
 
   return (
     <main className="bg-white">
-      <Navbar />
+      <Navbar alternateHref={alternateHref} />
       <article className="px-5 pb-28 pt-36 sm:pt-40">
         <div className="mx-auto max-w-3xl">
           <Link href="/hirek" className="text-xs font-bold uppercase tracking-[0.3em] text-md-deep hover:text-black">
@@ -66,7 +74,7 @@ export default async function NewsArticlePage({ params }: Props) {
           </div>
         </div>
       </article>
-      <Footer footer={settings.footer} />
+      <Footer footer={settings.footer} alternateHref={alternateHref} />
     </main>
   );
 }

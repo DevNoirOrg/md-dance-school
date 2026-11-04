@@ -7,6 +7,7 @@ import { submitCampApplication } from "@/app/actions/applications";
 import type { CampContent } from "@/lib/content-types";
 import { EMAIL_RE } from "@/lib/format";
 import { PRIVACY_URL } from "@/lib/privacy";
+import { t, type Locale } from "@/lib/i18n";
 
 /*
   Tánctábor jelentkezési űrlap — a főoldali jelentkezés stílusában.
@@ -52,19 +53,20 @@ const emptyFor = (camp: CampContent): Values => ({
   website: "",
 });
 
-function validate(v: Values) {
+function validate(v: Values, locale: Locale) {
+  const copy = t(locale).camp;
   const e: Record<string, string> = {};
-  if (!v.nev.trim()) e.nev = "Add meg a táborlakó nevét.";
-  if (!v.email.trim()) e.email = "Add meg a kapcsolattartó e-mail címét.";
-  else if (!EMAIL_RE.test(v.email.trim())) e.email = "Adj meg egy érvényes e-mail címet.";
-  if (!v.telefon.trim()) e.telefon = "Add meg a táborlakó telefonszámát.";
+  if (!v.nev.trim()) e.nev = copy.errName;
+  if (!v.email.trim()) e.email = copy.errEmail;
+  else if (!EMAIL_RE.test(v.email.trim())) e.email = copy.invalidEmail;
+  if (!v.telefon.trim()) e.telefon = copy.errPhone;
   else if (!/^\+?[\d\s\-()/]+$/.test(v.telefon.trim()) || v.telefon.replace(/\D/g, "").length < 7)
-    e.telefon = "Ellenőrizd a telefonszámot.";
-  if (!v.szuletes) e.szuletes = "Add meg a születési dátumot.";
-  else if (new Date(v.szuletes) > new Date()) e.szuletes = "A dátum a jövőben van.";
-  if (v.turnus.length === 0) e.turnus = "Válassz legalább egy turnust.";
-  if (!v.adatkezeles) e.adatkezeles = "A jelentkezéshez el kell fogadnod az adatkezelési tájékoztatót.";
-  if (!v.hozzajarulas) e.hozzajarulas = "A jelentkezéshez hozzá kell járulnod az adatkezeléshez.";
+    e.telefon = copy.phoneCheck;
+  if (!v.szuletes) e.szuletes = copy.errDate;
+  else if (new Date(v.szuletes) > new Date()) e.szuletes = copy.errFuture;
+  if (v.turnus.length === 0) e.turnus = copy.errTurn;
+  if (!v.adatkezeles) e.adatkezeles = copy.errPrivacy;
+  if (!v.hozzajarulas) e.hozzajarulas = copy.errConsent;
   return e;
 }
 
@@ -152,7 +154,8 @@ function CheckBox({
   );
 }
 
-export default function TaborJelentkezes({ camp }: { camp: CampContent }) {
+export default function TaborJelentkezes({ camp, locale = "hu" }: { camp: CampContent; locale?: Locale }) {
+  const copy = t(locale).camp;
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
   const [v, setV] = useState<Values>(() => emptyFor(camp));
@@ -162,7 +165,7 @@ export default function TaborJelentkezes({ camp }: { camp: CampContent }) {
   const [sending, setSending] = useState(false);
   const [serverError, setServerError] = useState("");
 
-  const errors = useMemo(() => validate(v), [v]);
+  const errors = useMemo(() => validate(v, locale), [v, locale]);
   const errorCount = Object.keys(errors).length;
   const shown = (k: string) => (submitTried || touched[k] ? errors[k] : undefined);
 
@@ -188,13 +191,13 @@ export default function TaborJelentkezes({ camp }: { camp: CampContent }) {
     setSending(true);
     try {
       const { adatkezeles, hozzajarulas, ...rest } = v;
-      const res = await submitCampApplication({ ...rest, tajekoztato: adatkezeles as true, adatkezeles: hozzajarulas as true });
+      const res = await submitCampApplication({ ...rest, locale, tajekoztato: adatkezeles as true, adatkezeles: hozzajarulas as true });
       if (!res.ok) {
         setServerError(res.error);
         return;
       }
     } catch {
-      setServerError("Nem sikerült elküldeni a jelentkezést. Ellenőrizd az internetkapcsolatot, és próbáld újra.");
+      setServerError(copy.sendError);
       return;
     } finally {
       setSending(false);
@@ -205,19 +208,19 @@ export default function TaborJelentkezes({ camp }: { camp: CampContent }) {
       .map((t) => `${t.label} (${t.dates})`)
       .join(", ");
     const rows: [string, string][] = [
-      ["Táborlakó", v.nev],
-      ["E-mail", v.email],
-      ["Telefon", v.telefon],
-      ["Születési dátum", v.szuletes],
-      ["Pólóméret", v.polo],
-      ["Turnus", turnusText],
-      ["Fizetési mód", v.fizetes],
+      [copy.resident, v.nev],
+      [copy.contactEmail, v.email],
+      [copy.phoneLabel, v.telefon],
+      [copy.birth, v.szuletes],
+      [copy.shirt, v.polo],
+      [copy.turn, turnusText],
+      [copy.payment, v.fizetes],
     ];
     if (v.szulo_nev.trim() || v.szulo_telefon.trim())
-      rows.push(["Szülő / gondviselő", [v.szulo_nev, v.szulo_telefon].filter(Boolean).join(" · ")]);
-    if (v.lakcim.trim()) rows.push(["Lakcím", v.lakcim]);
-    if (v.tudnivalo.trim()) rows.push(["Fontos tudnivaló", v.tudnivalo]);
-    rows.push(["Honnan hallottál róla", v.honnan], ["Kitöltő", v.kitolto]);
+      rows.push([copy.parent, [v.szulo_nev, v.szulo_telefon].filter(Boolean).join(" · ")]);
+    if (v.lakcim.trim()) rows.push([copy.address, v.lakcim]);
+    if (v.tudnivalo.trim()) rows.push([copy.importantNote, v.tudnivalo]);
+    rows.push([copy.source, v.honnan], [copy.filler, v.kitolto]);
     setSummary(rows);
     setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
@@ -244,15 +247,15 @@ export default function TaborJelentkezes({ camp }: { camp: CampContent }) {
             className="section-title absolute left-6 text-4xl leading-none sm:left-12 sm:text-5xl"
             style={{ top: "-0.5em", color: "#000", WebkitTextStroke: "7px #fff", paintOrder: "stroke" }}
           >
-            JELENTKEZÉS
+            {copy.heading}
           </h2>
 
           {summary ? (
             <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} className="text-center">
               <SuccessIcon />
-              <h3 className="mt-6 text-3xl font-black text-black">Köszönjük a jelentkezést!</h3>
+              <h3 className="mt-6 text-3xl font-black text-black">{copy.thanks}</h3>
               <p className="mt-3 text-sm font-semibold text-gray-500">
-                A jelentkezést e-mailben visszaigazoljuk, és megírjuk a befizetéssel kapcsolatos tudnivalókat.
+                {copy.confirmation}
               </p>
               <SummaryRows rows={summary} />
               <button
@@ -260,7 +263,7 @@ export default function TaborJelentkezes({ camp }: { camp: CampContent }) {
                 onClick={restart}
                 className="mt-8 text-[11px] font-extrabold uppercase tracking-widest text-[#1a9ea3] transition-colors hover:text-black"
               >
-                Új jelentkezés indítása
+                {copy.restart}
               </button>
             </motion.div>
           ) : (
@@ -275,13 +278,13 @@ export default function TaborJelentkezes({ camp }: { camp: CampContent }) {
                 }`}
               >
                 <div className="mb-4 text-[11px] font-extrabold uppercase tracking-widest text-black">
-                  Turnus időpont <span className="text-[#1a9ea3]">*</span>
+                  {copy.turn} <span className="text-[#1a9ea3]">*</span>
                 </div>
                 <div className="space-y-3">
                   {camp.turnusok.map((t) => (
                     <CheckBox key={t.id} id={`turnus-${t.id}`} checked={v.turnus.includes(t.id)} onChange={() => toggleTurnus(t.id)} disabled={t.closed}>
                       {t.label} · {t.dates} ({t.days})
-                      {t.closed && <span className="ml-2 text-[11px] font-extrabold uppercase tracking-wider text-gray-500">Lezárva</span>}
+                      {t.closed && <span className="ml-2 text-[11px] font-extrabold uppercase tracking-wider text-gray-500">{copy.closed}</span>}
                     </CheckBox>
                   ))}
                 </div>
@@ -290,18 +293,16 @@ export default function TaborJelentkezes({ camp }: { camp: CampContent }) {
 
               <div>
                 <Label htmlFor="t-nev" required>
-                  Táborlakó neve
+                  {copy.resident}
                 </Label>
-                <input id="t-nev" type="text" autoComplete="name" placeholder="Kovács Emma" maxLength={200}
+                <input id="t-nev" type="text" autoComplete="name" placeholder={copy.namePlaceholder} maxLength={200}
                   value={v.nev} onChange={set("nev")} onBlur={touch("nev")} className={cls("nev")} />
                 <ErrorText>{shown("nev")}</ErrorText>
               </div>
 
               <div>
-                <Label htmlFor="t-email" required>
-                  Kapcsolattartó e-mail
-                </Label>
-                <input id="t-email" type="email" autoComplete="email" placeholder="hello@valami.hu" maxLength={200}
+                <Label htmlFor="t-email" required>{copy.contactEmail}</Label>
+                <input id="t-email" type="email" autoComplete="email" placeholder={copy.emailPlaceholder} maxLength={200}
                   value={v.email} onChange={set("email")} onBlur={touch("email")} className={cls("email")} />
                 <ErrorText>{shown("email")}</ErrorText>
               </div>
@@ -309,7 +310,7 @@ export default function TaborJelentkezes({ camp }: { camp: CampContent }) {
               <div className="grid gap-6 md:grid-cols-2">
                 <div>
                   <Label htmlFor="t-telefon" required>
-                    Telefonszám
+                    {copy.phoneLabel}
                   </Label>
                   <input id="t-telefon" type="tel" autoComplete="tel" placeholder="+36 30 123 4567" maxLength={40}
                     value={v.telefon} onChange={set("telefon")} onBlur={touch("telefon")} className={cls("telefon")} />
@@ -317,7 +318,7 @@ export default function TaborJelentkezes({ camp }: { camp: CampContent }) {
                 </div>
                 <div>
                   <Label htmlFor="t-szuletes" required>
-                    Születési dátum
+                    {copy.birth}
                   </Label>
                   <input id="t-szuletes" type="date"
                     value={v.szuletes} onChange={set("szuletes")} onBlur={touch("szuletes")} className={cls("szuletes")} />
@@ -325,53 +326,53 @@ export default function TaborJelentkezes({ camp }: { camp: CampContent }) {
                 </div>
               </div>
 
-              <ChipGroup name="polo" label="Pólóméret" options={camp.form.shirtSizes} value={v.polo} onChange={setVal("polo")} />
+              <ChipGroup name="polo" label={copy.shirt} options={camp.form.shirtSizes} value={v.polo} onChange={setVal("polo")} />
 
               <div>
-                <Label htmlFor="t-tudnivalo">Fontos tudnivaló</Label>
-                <textarea id="t-tudnivalo" rows={4} placeholder="pl. allergia, speciális étrend, SZÉP kártyás fizetés…" maxLength={2000}
+                <Label htmlFor="t-tudnivalo">{copy.importantNote}</Label>
+                <textarea id="t-tudnivalo" rows={4} placeholder={copy.notePlaceholder} maxLength={2000}
                   value={v.tudnivalo} onChange={set("tudnivalo")} className={cls("tudnivalo", "resize-none")} />
               </div>
 
               <div className="grid gap-6 md:grid-cols-2">
                 <div>
-                  <Label htmlFor="t-szulo_nev">Szülő / gondviselő neve</Label>
-                  <input id="t-szulo_nev" type="text" placeholder="Kovács Ákos" maxLength={200}
+                  <Label htmlFor="t-szulo_nev">{copy.parent}</Label>
+                  <input id="t-szulo_nev" type="text" placeholder={copy.parentPlaceholder} maxLength={200}
                     value={v.szulo_nev} onChange={set("szulo_nev")} className={cls("szulo_nev")} />
                 </div>
                 <div>
-                  <Label htmlFor="t-szulo_telefon">Szülő telefonszáma</Label>
+                  <Label htmlFor="t-szulo_telefon">{copy.parentPhone}</Label>
                   <input id="t-szulo_telefon" type="tel" placeholder="+36 30 123 4567" maxLength={40}
                     value={v.szulo_telefon} onChange={set("szulo_telefon")} className={cls("szulo_telefon")} />
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="t-lakcim">Lakcím</Label>
-                <input id="t-lakcim" type="text" autoComplete="street-address" placeholder="Számlázási cím" maxLength={300}
+                <Label htmlFor="t-lakcim">{copy.address}</Label>
+                <input id="t-lakcim" type="text" autoComplete="street-address" placeholder={copy.billingAddress} maxLength={300}
                   value={v.lakcim} onChange={set("lakcim")} className={cls("lakcim")} />
               </div>
 
-              <ChipGroup name="fizetes" label="Fizetési mód" options={camp.form.payments} value={v.fizetes} onChange={setVal("fizetes")} />
-              <ChipGroup name="honnan" label="Honnan hallottál a táborról?" options={camp.form.sources} value={v.honnan} onChange={setVal("honnan")} />
-              <ChipGroup name="kitolto" label="Jelentkező lapot kitöltő személy" options={camp.form.fillers} value={v.kitolto} onChange={setVal("kitolto")} />
+              <ChipGroup name="fizetes" label={copy.payment} options={camp.form.payments} value={v.fizetes} onChange={setVal("fizetes")} />
+              <ChipGroup name="honnan" label={copy.source} options={camp.form.sources} value={v.honnan} onChange={setVal("honnan")} />
+              <ChipGroup name="kitolto" label={copy.filler} options={camp.form.fillers} value={v.kitolto} onChange={setVal("kitolto")} />
 
               <div className="space-y-4 rounded-3xl bg-gray-50 p-6">
                 <div id="t-adatkezeles">
                   <CheckBox id="c-adatkezeles" checked={v.adatkezeles} error={submitTried && errors.adatkezeles}
                     onChange={(e) => setV((p) => ({ ...p, adatkezeles: e.target.checked }))}>
-                    Elolvastam és elfogadom az{" "}
-                    <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-md-deep">
-                      Adatkezelési tájékoztatóban
+                    {copy.privacyRead}{" "}
+                    <a href={locale === "en" ? "/en/privacy" : PRIVACY_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-md-deep">
+                      {copy.privacyLink}
                     </a>{" "}
-                    foglaltakat. <span className="text-[#1a9ea3]">*</span>
+                    {copy.privacyEnd} <span className="text-[#1a9ea3]">*</span>
                   </CheckBox>
                   {submitTried && <ErrorText>{errors.adatkezeles}</ErrorText>}
                 </div>
                 <div id="t-hozzajarulas">
                   <CheckBox id="c-hozzajarulas" checked={v.hozzajarulas} error={submitTried && errors.hozzajarulas}
                     onChange={(e) => setV((p) => ({ ...p, hozzajarulas: e.target.checked }))}>
-                    Hozzájárulok a fenti adataim Adatkezelő által történő kezeléséhez. <span className="text-[#1a9ea3]">*</span>
+                    {copy.consentData} <span className="text-[#1a9ea3]">*</span>
                   </CheckBox>
                   {submitTried && <ErrorText>{errors.hozzajarulas}</ErrorText>}
                 </div>
@@ -380,8 +381,8 @@ export default function TaborJelentkezes({ camp }: { camp: CampContent }) {
               {submitTried && errorCount > 0 && (
                 <ErrorBox>
                   {errorCount === 1
-                    ? "Egy mező még hiányzik vagy hibás."
-                    : `${errorCount} mező még hiányzik vagy hibás. A pirossal jelölt helyeket javítsd!`}
+                    ? copy.genericError
+                    : `${errorCount} ${copy.genericErrorMany}`}
                 </ErrorBox>
               )}
               {serverError && <ErrorBox>{serverError}</ErrorBox>}
@@ -393,10 +394,10 @@ export default function TaborJelentkezes({ camp }: { camp: CampContent }) {
                 whileTap={{ scale: 0.99 }}
                 className="w-full rounded-2xl bg-black py-5 text-sm font-extrabold uppercase tracking-[0.3em] text-white shadow-xl transition-colors duration-200 hover:bg-md-cyan hover:text-black disabled:cursor-wait disabled:opacity-60"
               >
-                {sending ? "Küldés…" : "Jelentkezek"}
+                {sending ? copy.sending : copy.submit}
               </motion.button>
               <p className="text-center text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                <span className="text-[#1a9ea3]">*</span> kötelező mező
+                <span className="text-[#1a9ea3]">*</span> {copy.required}
               </p>
             </form>
           )}

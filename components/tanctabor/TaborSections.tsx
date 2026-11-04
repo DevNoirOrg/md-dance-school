@@ -8,6 +8,8 @@ import HalftoneDots from "../HalftoneDots";
 import InstaCard from "../InstaCard";
 import type { CampContent, Teacher } from "@/lib/content-types";
 import { mediaUrl } from "@/lib/format";
+import LanguageSwitch from "../LanguageSwitch";
+import { t, type Locale } from "@/lib/i18n";
 
 /* A tánctábor oldal szekciói — a tartalom az adminban szerkeszthető (Tánctábor menüpont). */
 
@@ -68,7 +70,8 @@ function PaymentLine({ line }: { line: string }) {
    1) Fejléc
    ────────────────────────────────────────────────────────────── */
 
-export function TaborHero({ camp }: { camp: CampContent }) {
+export function TaborHero({ camp, locale = "hu" }: { camp: CampContent; locale?: Locale }) {
+  const copy = t(locale).camp;
   return (
     <section className="relative overflow-hidden bg-black px-5 pb-28 pt-32 sm:pt-36 lg:pb-32" style={{ overflowX: "clip" }}>
       {/* Halvány háttérkép + sötét átmenet */}
@@ -80,6 +83,9 @@ export function TaborHero({ camp }: { camp: CampContent }) {
       <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-black via-black/85 to-black/40" />
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-white to-transparent" />
       <HalftoneDots size={240} zIndex={1} style={{ bottom: -70, left: -90 }} />
+      <div className="absolute right-5 top-6 z-20 rounded-full bg-black/35 px-4 py-2 text-white backdrop-blur-sm sm:right-8 sm:top-8">
+        <LanguageSwitch locale={locale} />
+      </div>
 
       <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-16">
         {/* ── Bal oszlop: kedvcsináló szöveg + gombok ── */}
@@ -97,13 +103,13 @@ export function TaborHero({ camp }: { camp: CampContent }) {
               href="#jelentkezes"
               className="rounded-full bg-md-cyan px-10 py-4 text-sm font-extrabold uppercase tracking-[0.2em] text-black shadow-xl transition-all hover:-translate-y-0.5 hover:bg-white"
             >
-              Jelentkezem
+              {copy.apply}
             </a>
             <a
               href="#info"
               className="rounded-full border border-white/40 px-10 py-4 text-sm font-extrabold uppercase tracking-[0.2em] text-white transition-colors hover:bg-white/10"
             >
-              Árak és időpontok
+              {copy.pricesAndDates}
             </a>
           </div>
         </motion.div>
@@ -120,7 +126,7 @@ export function TaborHero({ camp }: { camp: CampContent }) {
               <video className="absolute inset-0 h-full w-full object-cover" src={mediaUrl(camp.reelPath)} autoPlay muted loop playsInline />
             ) : (
               <div className="absolute inset-0 grid place-items-center rounded-[2rem] border border-dashed border-white/25">
-                <span className="text-xs font-bold uppercase tracking-[0.3em] text-white/50">Álló videó</span>
+                <span className="text-xs font-bold uppercase tracking-[0.3em] text-white/50">{copy.video}</span>
               </div>
             )}
           </div>
@@ -134,7 +140,8 @@ export function TaborHero({ camp }: { camp: CampContent }) {
    2) Három oszlop: Árak (fehér) · Időpontok (fekete) · Helyszín (türkiz)
    ────────────────────────────────────────────────────────────── */
 
-export function TaborInfo({ camp }: { camp: CampContent }) {
+export function TaborInfo({ camp, locale = "hu" }: { camp: CampContent; locale?: Locale }) {
+  const copy = t(locale).camp;
   return (
     <section id="info" className="relative z-20 scroll-mt-24 px-4 pb-20 sm:pb-28" style={{ overflowX: "clip" }}>
       <HalftoneDots size={260} zIndex={0} style={{ bottom: 40, right: -130 }} />
@@ -143,9 +150,9 @@ export function TaborInfo({ camp }: { camp: CampContent }) {
         <div className="grid grid-cols-1 overflow-hidden rounded-[2rem] border border-gray-200 shadow-[0_24px_70px_rgba(0,0,0,0.18)] lg:grid-cols-[1.7fr_1fr_1fr]">
           {/* ── Árak ── */}
           <div className="bg-white px-6 py-9 sm:px-10 sm:py-11">
-            <PanelTitle>Árak</PanelTitle>
+            <PanelTitle>{copy.prices}</PanelTitle>
 
-            <SubTitle>Tábor díja</SubTitle>
+            <SubTitle>{copy.campFee}</SubTitle>
             <ul className="divide-y divide-gray-100 rounded-2xl border border-gray-100 bg-gray-50/60">
               {camp.prices.map((p, i) => (
                 <li key={i} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-4 py-3">
@@ -158,7 +165,7 @@ export function TaborInfo({ camp }: { camp: CampContent }) {
                   <span className="ml-auto whitespace-nowrap font-extrabold text-black">{p.price}</span>
                   {p.until && (
                     <span className="basis-full pl-8 text-[13px] text-gray-500">
-                      Elérhető: <strong className="font-bold text-gray-700">{p.until}</strong>
+                      {copy.available} <strong className="font-bold text-gray-700">{p.until}</strong>
                     </span>
                   )}
                 </li>
@@ -169,7 +176,7 @@ export function TaborInfo({ camp }: { camp: CampContent }) {
               {camp.priceIncludes} {camp.priceExcludes && <span className="text-gray-500">{camp.priceExcludes}</span>}
             </p>
 
-            <SubTitle className="mt-8">Szabad helyek</SubTitle>
+            <SubTitle className="mt-8">{copy.spots}</SubTitle>
             <ul className="space-y-2.5">
               {camp.turnusok.map((t) => (
                 <li key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[15px] text-gray-800">
@@ -191,7 +198,7 @@ export function TaborInfo({ camp }: { camp: CampContent }) {
 
             {camp.paymentMethods.length > 0 && (
               <>
-                <SubTitle className="mt-8">Befizetési módok</SubTitle>
+                <SubTitle className="mt-8">{copy.payments}</SubTitle>
                 <ul className="space-y-2.5 text-[15px] leading-relaxed text-gray-800">
                   {camp.paymentMethods.map((line, i) => (
                     <li key={i} className="flex gap-2.5">
@@ -206,7 +213,7 @@ export function TaborInfo({ camp }: { camp: CampContent }) {
 
           {/* ── Időpontok ── */}
           <div className="flex flex-col bg-black px-6 py-9 text-white sm:px-10 sm:py-11 lg:px-8">
-            <PanelTitle tone="light">Időpontok</PanelTitle>
+            <PanelTitle tone="light">{copy.dates}</PanelTitle>
 
             <ul className="space-y-4">
               {camp.turnusok.map((t) => (
@@ -214,7 +221,7 @@ export function TaborInfo({ camp }: { camp: CampContent }) {
                   <CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-md-cyan" strokeWidth={1.8} />
                   <span className={`text-[15px] leading-relaxed ${t.closed ? "text-white/50" : ""}`}>
                     <strong className="text-white">{t.label}:</strong> {t.dates}
-                    <br />({t.days}){t.closed && " – lezárva"}
+                    <br />({t.days}){t.closed && ` – ${copy.closed}`}
                   </span>
                 </li>
               ))}
@@ -241,13 +248,13 @@ export function TaborInfo({ camp }: { camp: CampContent }) {
               href="#jelentkezes"
               className="mt-10 block rounded-xl bg-md-cyan px-6 py-4 text-center text-sm font-extrabold uppercase tracking-widest text-black transition-colors hover:bg-white lg:mt-auto"
             >
-              Jelentkezek
+              {copy.apply}
             </a>
           </div>
 
           {/* ── Helyszín ── */}
           <div className="bg-md-cyan px-6 py-9 text-black sm:px-10 sm:py-11 lg:px-8">
-            <PanelTitle>Tábor helyszíne</PanelTitle>
+            <PanelTitle>{copy.location}</PanelTitle>
 
             <div className="flex gap-3">
               <MapPin className="mt-0.5 h-5 w-5 shrink-0" strokeWidth={2} />
@@ -259,14 +266,14 @@ export function TaborInfo({ camp }: { camp: CampContent }) {
 
             {camp.importantText && (
               <>
-                <SubTitle className="mt-8">Fontos tudnivaló</SubTitle>
+                <SubTitle className="mt-8">{copy.important}</SubTitle>
                 <p className="text-[15px] leading-relaxed text-black/80">{camp.importantText}</p>
               </>
             )}
 
             {camp.applyText && (
               <>
-                <SubTitle className="mt-8">Jelentkezési lehetőség</SubTitle>
+                <SubTitle className="mt-8">{copy.signupInfo}</SubTitle>
                 <p className="text-[15px] leading-relaxed text-black/80">{camp.applyText}</p>
               </>
             )}
@@ -290,7 +297,7 @@ const teacherDots = [
 ];
 const ROTATE = [-2, 1.5, -1.5, 2, -1];
 
-export function TaborTeachers({ camp, teachers }: { camp: CampContent; teachers: Teacher[] }) {
+export function TaborTeachers({ camp, teachers, locale = "hu" }: { camp: CampContent; teachers: Teacher[]; locale?: Locale }) {
   // A tábor tanárai a Tanárok listából (fotó, Insta-videó link), a táborban megadott sorrendben.
   const list = camp.teachers.map((name) => teachers.find((t) => t.name === name)).filter((t): t is Teacher => !!t);
   if (list.length === 0) return null;
@@ -310,7 +317,7 @@ export function TaborTeachers({ camp, teachers }: { camp: CampContent; teachers:
 
       <div className="relative z-10 mx-auto max-w-7xl">
         <FadeIn>
-          <h2 className="section-title mb-12 text-center text-5xl text-white sm:mb-16 sm:text-6xl">TÁNCTANÁRAINK</h2>
+          <h2 className="section-title mb-12 text-center text-5xl text-white sm:mb-16 sm:text-6xl">{t(locale).camp.teachers}</h2>
         </FadeIn>
 
         <div className="flex flex-wrap justify-center gap-x-6 gap-y-10">

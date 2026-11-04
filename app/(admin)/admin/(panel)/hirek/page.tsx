@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Hírek" };
 async function Content() {
   await requireAdmin();
   const [news, title, info] = await Promise.all([readNews(), getSetting("news"), getEditInfo("news")]);
-  return <NewsEditor news={news} title={title.title} info={info} />;
+  return <NewsEditor news={news} title={title} info={info} />;
 }
 
 export default function Page() {

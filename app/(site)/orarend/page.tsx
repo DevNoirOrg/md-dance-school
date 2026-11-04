@@ -12,6 +12,7 @@ export const metadata: Metadata = {
   title: "Órarend és tanfolyamok – MD Dance School",
   description:
     "Az MD Dance School órarendje, tanfolyamai és árai: hip-hop, koreográfia, girly, high heels és house, kezdőtől haladóig. Jelentkezz online!",
+  alternates: { canonical: "/orarend", languages: { hu: "/orarend", en: "/en/schedule" } },
 };
 
 // Az órarend és a jelentkezés UGYANAZ a komponens, mint a főoldalon.

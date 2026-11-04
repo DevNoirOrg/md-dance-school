@@ -32,6 +32,7 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
         <Card className="self-start">
           <dl className="divide-y divide-slate-100">
             <DetailRow k="Beküldve">{new Date(a.createdAt).toLocaleString("hu-HU")}</DetailRow>
+            <DetailRow k="Nyelv">{a.language === "en" ? "angol" : "magyar"}</DetailRow>
             <DetailRow k="E-mail">{mailLink(a.email)}</DetailRow>
             <DetailRow k="Telefon">{a.telefon}</DetailRow>
             <DetailRow k="Születési dátum">{a.szuletes}</DetailRow>

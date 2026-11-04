@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Órarend" };
 async function Content() {
   await requireAdmin();
   const [rooms, schedule, info] = await Promise.all([readRooms(), getSetting("schedule"), getEditInfo("schedule")]);
-  return <ScheduleEditor initial={rooms} initialHint={schedule.hint} info={info} />;
+  return <ScheduleEditor initial={rooms} initialHint={schedule.hint} initialEnglishHint={schedule.en?.hint ?? ""} info={info} />;
 }
 
 export default function Page() {

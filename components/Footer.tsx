@@ -6,18 +6,19 @@ import ContactForm from "./ContactForm";
 import HalftoneDots from "./HalftoneDots";
 import { SocialIcon } from "./SocialIcons";
 import type { FooterContent } from "@/lib/content-types";
-import { PRIVACY_URL } from "@/lib/privacy";
+import LanguageSwitch from "./LanguageSwitch";
+import { t, type Locale } from "@/lib/i18n";
 
 const telHref = (phone: string) => `tel:${phone.replace(/[^\d+]/g, "")}`;
 
-export default function Footer({ footer }: { footer: FooterContent }) {
+export default function Footer({ footer, locale = "hu", alternateHref }: { footer: FooterContent; locale?: Locale; alternateHref?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
 
   return (
     <>
       {/* „Írj nekünk” űrlap — minden oldalon a lábléc fölött */}
-      <ContactForm />
+      <ContactForm locale={locale} />
       <footer
         id="elerhetoseg"
         className="relative z-20 bg-white px-4 pb-8 pt-16"
@@ -33,13 +34,14 @@ export default function Footer({ footer }: { footer: FooterContent }) {
           transition={{ duration: 0.7 }}
           className="relative z-10 mx-auto flex max-w-3xl flex-col items-center gap-8 text-center"
         >
+          <LanguageSwitch locale={locale} alternateHref={alternateHref} className="rounded-full bg-black px-4 py-2 text-white" />
           <Image src="/canva/logo-md-black-trim.png" alt="MD Dance School" width={273} height={219} className="w-auto" style={{ height: 140 }} />
 
           {/* Elérhetőség */}
           <div className="space-y-4 text-lg text-gray-900 sm:text-xl">
             {footer.email && (
               <p>
-                <span className="font-bold">E-mail:</span>{" "}
+                <span className="font-bold">{t(locale).common.email}:</span>{" "}
                 <a href={`mailto:${footer.email}`} className="underline underline-offset-2 transition-colors hover:text-md-cyan">
                   {footer.email}
                 </a>
@@ -47,7 +49,7 @@ export default function Footer({ footer }: { footer: FooterContent }) {
             )}
             {footer.phone && (
               <p>
-                <span className="font-bold">Tel.:</span>{" "}
+                <span className="font-bold">{t(locale).common.phone}:</span>{" "}
                 <a href={telHref(footer.phone)} className="underline underline-offset-2 transition-colors hover:text-md-cyan">
                   {footer.phone}
                 </a>
@@ -82,7 +84,7 @@ export default function Footer({ footer }: { footer: FooterContent }) {
 
           <Image
             src="/canva/payment-methods.png"
-            alt="Elfogadott fizetési módok: Barion, VISA, VISA Electron, Mastercard, Maestro, American Express"
+            alt={locale === "en" ? "Accepted payment methods: Barion, VISA, VISA Electron, Mastercard, Maestro, American Express" : "Elfogadott fizetési módok: Barion, VISA, VISA Electron, Mastercard, Maestro, American Express"}
             width={413}
             height={50}
             className="h-auto w-full max-w-[420px]"
@@ -91,14 +93,14 @@ export default function Footer({ footer }: { footer: FooterContent }) {
 
         {/* Jogi linkek — szétosztva a szélekre */}
         <div className="relative mx-auto mt-14 flex max-w-6xl flex-wrap justify-between gap-4 text-base text-gray-600 sm:text-lg">
-          <a href={PRIVACY_URL} className="transition-colors hover:text-black">
-            Adatkezelési tájékoztató
+          <a href={locale === "en" ? "/en/privacy" : "/adatkezeles"} className="transition-colors hover:text-black">
+            {t(locale).common.privacy}
           </a>
           <a href="#" className="transition-colors hover:text-black">
-            ÁSZF
+            {t(locale).common.terms}
           </a>
           <a href="#" className="transition-colors hover:text-black">
-            Cookie beállítások
+            {t(locale).common.cookieSettings}
           </a>
         </div>
       </footer>

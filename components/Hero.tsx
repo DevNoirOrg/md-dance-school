@@ -3,13 +3,18 @@ import { motion } from "motion/react";
 import HalftoneDots from "@/components/HalftoneDots";
 import type { HeroContent } from "@/lib/content-types";
 import { mediaUrl } from "@/lib/format";
+import LanguageSwitch from "./LanguageSwitch";
+import type { Locale } from "@/lib/i18n";
 
-export default function Hero({ hero }: { hero: HeroContent }) {
+export default function Hero({ hero, locale = "hu" }: { hero: HeroContent; locale?: Locale }) {
   return (
     <section
       id="hero"
       style={{ position: "relative", width: "100%", height: "100vh", minHeight: 600, overflow: "visible", background: "#000" }}
     >
+      <div className="absolute right-5 top-6 z-20 rounded-full bg-black/35 px-4 py-2 text-white backdrop-blur-sm sm:right-8 sm:top-8">
+        <LanguageSwitch locale={locale} />
+      </div>
       {/* ── Háttérkép ── */}
       <div
         style={{
@@ -127,6 +132,16 @@ export default function Hero({ hero }: { hero: HeroContent }) {
           </motion.p>
         </div>
       )}
+      <div className="absolute inset-x-0 z-10 flex justify-center gap-3 px-4" style={{ top: "calc(75% + 148px)" }}>
+        <a href={locale === "en" ? "/en/schedule#jelentkezes" : "/orarend#jelentkezes"}
+          className="rounded-full bg-md-cyan px-6 py-3 text-xs font-extrabold uppercase tracking-widest text-black shadow-lg transition-colors hover:bg-white sm:px-8">
+          {locale === "en" ? "Join now" : "Jelentkezem"}
+        </a>
+        <a href={locale === "en" ? "/en/schedule" : "/orarend"}
+          className="rounded-full border border-white/70 bg-black/35 px-6 py-3 text-xs font-extrabold uppercase tracking-widest text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-white hover:text-black sm:px-8">
+          {locale === "en" ? "Our schedule" : "Órarend"}
+        </a>
+      </div>
     </section>
   );
 }

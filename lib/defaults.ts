@@ -1,4 +1,4 @@
-import type { NewsItem, SettingsMap, Teacher } from "./content-types";
+import type { DeepPartial, NewsItem, SettingsMap, Teacher } from "./content-types";
 import { defaultPrivacyText } from "./privacy-default.ts";
 
 /*
@@ -257,7 +257,13 @@ export const defaultNews: NewsItem[] = [
 ];
 
 /** Órarend nyers alapértéke (a chip/full feliratokat a lib/content.ts számolja). */
-type RawRoom = { id: string; name: string; shortName: string; columns: { heading: string; classes: { id: string; time: string; title: string }[] }[] };
+type RawRoom = {
+  id: string;
+  name: string;
+  shortName: string;
+  en?: DeepPartial<{ name: string; shortName: string; columns: { heading: string; classes: { title: string }[] }[] }>;
+  columns: { heading: string; classes: { id: string; time: string; title: string }[] }[];
+};
 
 const HIPHOP = "Hip-hop Dalmával";
 let classSeq = 200;

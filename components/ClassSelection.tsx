@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { ClassItem } from "@/lib/content-types";
+import { t, type Locale } from "@/lib/i18n";
 
 /**
  * Közös állapot az Órarend és a Jelentkezés között (az UC oldal mintájára):
@@ -46,7 +47,7 @@ export function useClassSelection(): Ctx {
  * a darabszámmal és egy „Jelentkezem” gombbal. Elbújik, amikor az órarend alatti
  * összegző vagy maga a jelentkezési szekció látszik.
  */
-export function SelectionDock() {
+export function SelectionDock({ locale = "hu" }: { locale?: Locale }) {
   const { selected } = useClassSelection();
   const [covered, setCovered] = useState(false);
 
@@ -75,12 +76,12 @@ export function SelectionDock() {
       }`}
     >
       <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-black/95 px-5 py-4 shadow-2xl backdrop-blur">
-        <span className="text-sm font-bold text-white">{selected.length} óra kiválasztva</span>
+        <span className="text-sm font-bold text-white">{selected.length} {t(locale).schedule.selected}</span>
         <a
           href="#jelentkezes"
           className="ml-auto shrink-0 rounded-xl bg-md-cyan px-5 py-3 text-[11px] font-extrabold uppercase tracking-widest text-black"
         >
-          Jelentkezem
+          {t(locale).form.submit}
         </a>
       </div>
     </div>
@@ -92,10 +93,12 @@ export function SelectionChip({
   item,
   dark = false,
   onRemove,
+  locale = "hu",
 }: {
   item: SelectedClass;
   dark?: boolean;
   onRemove: (id: string) => void;
+  locale?: Locale;
 }) {
   return (
     <span
@@ -108,7 +111,7 @@ export function SelectionChip({
       <button
         type="button"
         onClick={() => onRemove(item.id)}
-        aria-label={`${item.chip} eltávolítása`}
+        aria-label={locale === "en" ? `Remove ${item.chip}` : `${item.chip} eltávolítása`}
         className={`flex h-5 w-5 items-center justify-center rounded-full text-base leading-none transition-colors ${
           dark ? "hover:bg-white/20" : "hover:bg-black/10"
         }`}

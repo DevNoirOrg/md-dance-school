@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { SelectionChip, useClassSelection, type SelectedClass } from "./ClassSelection";
 import HalftoneDots from "./HalftoneDots";
 import type { Room } from "@/lib/content-types";
+import { t, type Locale } from "@/lib/i18n";
 
 const MD_COLS: Record<number, string> = {
   1: "md:grid-cols-1",
@@ -65,7 +66,8 @@ function DayColumn({ room, column }: { room: Room; column: Room["columns"][numbe
   );
 }
 
-export default function Orarend({ rooms, hint }: { rooms: Room[]; hint: string }) {
+export default function Orarend({ rooms, hint, locale = "hu" }: { rooms: Room[]; hint: string; locale?: Locale }) {
+  const copy = t(locale).schedule;
   const [activeId, setActiveId] = useState(rooms[0]?.id ?? "");
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
@@ -123,7 +125,7 @@ export default function Orarend({ rooms, hint }: { rooms: Room[]; hint: string }
 
           {/* Fehér cím-doboz, fekete felirattal */}
           <div className="relative z-0 rounded-[1.75rem] border border-gray-200 bg-white px-6 py-5 shadow-[0_12px_40px_rgba(0,0,0,0.12)] sm:py-6">
-            <h2 className="section-title text-center text-3xl tracking-wide text-black sm:text-4xl">ÓRAREND</h2>
+            <h2 className="section-title text-center text-3xl tracking-wide text-black sm:text-4xl">{t(locale).schedule.title}</h2>
             {hint && (
               <p className="mt-2 text-center text-xs font-semibold uppercase tracking-widest text-gray-500 sm:text-sm">{hint}</p>
             )}
@@ -155,10 +157,10 @@ export default function Orarend({ rooms, hint }: { rooms: Room[]; hint: string }
         >
           <div className="min-w-0 flex-1">
             <div className="text-base font-bold">
-              {selected.length === 0 ? "Még nem választottál órát" : `${selected.length} óra kiválasztva`}
+              {selected.length === 0 ? copy.selectedNone : `${selected.length} ${copy.selected}`}
             </div>
             <div className="mt-1 text-sm text-white/60">
-              {selected.length === 0 ? "Kattints egy órára az órarendben" : "Többet is választhatsz, vagy távolítsd el a kijelölést"}
+              {selected.length === 0 ? copy.selectPrompt : copy.selectMore}
             </div>
             {selected.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-2">
@@ -172,7 +174,7 @@ export default function Orarend({ rooms, hint }: { rooms: Room[]; hint: string }
             href="#jelentkezes"
             className="shrink-0 rounded-xl bg-md-cyan px-6 py-3.5 text-center text-xs font-extrabold uppercase tracking-widest text-black transition-colors hover:bg-white"
           >
-            Tovább a jelentkezéshez
+            {copy.continue}
           </a>
         </div>
       </motion.div>

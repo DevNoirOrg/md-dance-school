@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import type { ActionResult } from "@/app/actions/admin";
+import { useEditingLocale } from "./LanguageEditorContext";
 
 /*
   Az admin felület közös építőkockái: kártya, mező, gombok, mentés-sáv,
@@ -242,6 +243,7 @@ export function StringListEditor({
   addLabel?: string;
   max?: number;
 }) {
+  const readOnlyStructure = useEditingLocale() === "en";
   const move = (i: number, d: -1 | 1) => {
     const next = [...items];
     [next[i], next[i + d]] = [next[i + d], next[i]];
@@ -257,19 +259,19 @@ export function StringListEditor({
             placeholder={placeholder}
             onChange={(e) => onChange(items.map((x, j) => (j === i ? e.target.value : x)))}
           />
-          <IconButton label="Feljebb" onClick={() => move(i, -1)} disabled={i === 0}>
+          <IconButton label="Feljebb" onClick={() => move(i, -1)} disabled={readOnlyStructure || i === 0}>
             ↑
           </IconButton>
-          <IconButton label="Lejjebb" onClick={() => move(i, 1)} disabled={i === items.length - 1}>
+          <IconButton label="Lejjebb" onClick={() => move(i, 1)} disabled={readOnlyStructure || i === items.length - 1}>
             ↓
           </IconButton>
-          <IconButton label="Törlés" onClick={() => onChange(items.filter((_, j) => j !== i))} className="hover:!bg-red-50 hover:!text-red-600">
+          <IconButton label="Törlés" disabled={readOnlyStructure} onClick={() => onChange(items.filter((_, j) => j !== i))} className="hover:!bg-red-50 hover:!text-red-600">
             ✕
           </IconButton>
         </div>
       ))}
       {items.length < max && (
-        <Button variant="ghost" onClick={() => onChange([...items, ""])}>
+        <Button variant="ghost" disabled={readOnlyStructure} onClick={() => onChange([...items, ""])}>
           {addLabel}
         </Button>
       )}

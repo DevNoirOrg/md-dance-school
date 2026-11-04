@@ -6,6 +6,7 @@ import HalftoneDots from "./HalftoneDots";
 import InstaCard from "./InstaCard";
 import type { NewsItem } from "@/lib/content-types";
 import { mediaUrl } from "@/lib/format";
+import { type Locale } from "@/lib/i18n";
 
 // A plakátok — ugyanaz az InstaCard, eltérő méret, képarány és döntés.
 // Asztali nézetben a kártyák ezt a mintát követik (sorban, ismétlődve).
@@ -55,7 +56,7 @@ function useIsMobile() {
   return useSyncExternalStore(subscribeMobile, () => window.matchMedia(MOBILE_MQ).matches, () => false);
 }
 
-function EventCard({ item, index, mobile }: { item: NewsItem; index: number; mobile: boolean }) {
+function EventCard({ item, index, mobile, locale }: { item: NewsItem; index: number; mobile: boolean; locale: Locale }) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
   const l = LAYOUT[index % LAYOUT.length];
@@ -79,7 +80,7 @@ function EventCard({ item, index, mobile }: { item: NewsItem; index: number; mob
       whileHover={mobile ? {} : { y: l.y - 12, rotate: 0, zIndex: 40, transition: { duration: 0.3 } }}
     >
       {/* A plakátra kattintva mindig a hír saját oldala nyílik meg (nem külső link). */}
-      <Link href={`/hirek/${item.slug}`} aria-label={`${item.title} — a hír megnyitása`} className="block rounded-2xl">
+      <Link href={locale === "en" ? `/en/news/${item.slug}` : `/hirek/${item.slug}`} aria-label={`${item.title} — ${locale === "en" ? "open news" : "a hír megnyitása"}`} className="block rounded-2xl">
         {card}
       </Link>
     </motion.div>
@@ -116,7 +117,7 @@ function Title({
   );
 }
 
-export default function News({ title, news }: { title: string; news: NewsItem[] }) {
+export default function News({ title, news, locale = "hu" }: { title: string; news: NewsItem[]; locale?: Locale }) {
   const mobile = useIsMobile();
   const titleRef = useRef<HTMLHeadingElement>(null);
   const inView = useInView(titleRef, { once: true, margin: "-80px" });
@@ -142,7 +143,7 @@ export default function News({ title, news }: { title: string; news: NewsItem[] 
 
         <div className={mobile ? "flex flex-col items-center gap-8" : "flex items-start justify-center gap-3 pt-2 sm:gap-6"}>
           {items.map((item, i) => (
-            <EventCard key={item.id} item={item} index={i} mobile={mobile} />
+            <EventCard key={item.id} item={item} index={i} mobile={mobile} locale={locale} />
           ))}
         </div>
 
