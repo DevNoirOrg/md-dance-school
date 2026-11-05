@@ -6,12 +6,11 @@ import ContactForm from "./ContactForm";
 import HalftoneDots from "./HalftoneDots";
 import { SocialIcon } from "./SocialIcons";
 import type { FooterContent } from "@/lib/content-types";
-import LanguageSwitch from "./LanguageSwitch";
 import { t, type Locale } from "@/lib/i18n";
 
 const telHref = (phone: string) => `tel:${phone.replace(/[^\d+]/g, "")}`;
 
-export default function Footer({ footer, locale = "hu", alternateHref }: { footer: FooterContent; locale?: Locale; alternateHref?: string }) {
+export default function Footer({ footer, locale = "hu" }: { footer: FooterContent; locale?: Locale }) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
 
@@ -34,7 +33,6 @@ export default function Footer({ footer, locale = "hu", alternateHref }: { foote
           transition={{ duration: 0.7 }}
           className="relative z-10 mx-auto flex max-w-3xl flex-col items-center gap-8 text-center"
         >
-          <LanguageSwitch locale={locale} alternateHref={alternateHref} className="rounded-full bg-black px-4 py-2 text-white" />
           <Image src="/canva/logo-md-black-trim.png" alt="MD Dance School" width={273} height={219} className="w-auto" style={{ height: 140 }} />
 
           {/* Elérhetőség */}

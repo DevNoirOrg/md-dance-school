@@ -202,7 +202,7 @@ export default function Navbar({ locale = "hu", alternateHref }: { locale?: Loca
             })}
           </div>
 
-          <div className="absolute right-20 top-1/2 -translate-y-1/2 text-black md:right-8">
+          <div className="hidden-mobile absolute right-20 top-1/2 -translate-y-1/2 text-black md:right-8">
             <LanguageSwitch locale={locale} alternateHref={alternateHref} />
           </div>
 
@@ -272,6 +272,14 @@ export default function Navbar({ locale = "hu", alternateHref }: { locale?: Loca
                 </motion.a>
               );
             })}
+            <motion.div
+              initial={{ x: -16, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: navLinks.length * 0.04 }}
+              style={{ padding: "14px 32px" }}
+            >
+              <LanguageSwitch locale={locale} alternateHref={alternateHref} variant="light" />
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

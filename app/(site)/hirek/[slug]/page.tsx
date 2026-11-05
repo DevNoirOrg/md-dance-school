@@ -74,7 +74,7 @@ export default async function NewsArticlePage({ params }: Props) {
           </div>
         </div>
       </article>
-      <Footer footer={settings.footer} alternateHref={alternateHref} />
+      <Footer footer={settings.footer} />
     </main>
   );
 }

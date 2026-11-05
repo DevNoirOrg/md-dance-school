@@ -3,18 +3,14 @@ import { motion } from "motion/react";
 import HalftoneDots from "@/components/HalftoneDots";
 import type { HeroContent } from "@/lib/content-types";
 import { mediaUrl } from "@/lib/format";
-import LanguageSwitch from "./LanguageSwitch";
 import type { Locale } from "@/lib/i18n";
 
-export default function Hero({ hero, locale = "hu" }: { hero: HeroContent; locale?: Locale }) {
+export default function Hero({ hero }: { hero: HeroContent; locale?: Locale }) {
   return (
     <section
       id="hero"
       style={{ position: "relative", width: "100%", height: "100vh", minHeight: 600, overflow: "visible", background: "#000" }}
     >
-      <div className="absolute right-5 top-6 z-20 rounded-full bg-black/35 px-4 py-2 text-white backdrop-blur-sm sm:right-8 sm:top-8">
-        <LanguageSwitch locale={locale} />
-      </div>
       {/* ── Háttérkép ── */}
       <div
         style={{
