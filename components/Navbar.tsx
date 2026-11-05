@@ -8,7 +8,9 @@ import LanguageSwitch from "./LanguageSwitch";
 import { t, type Locale } from "@/lib/i18n";
 
 // A stúdióbérlés ugyanezen a domainen, a /studio-berles alatt fut (a külön bérlés app szolgálja ki, lásd next.config.ts).
+// Az angol oldalakról a bérlés angol változatára (/studio-berles/en) visz.
 const STUDIO_RENTAL_URL = "/studio-berles";
+const STUDIO_RENTAL_URL_EN = "/studio-berles/en";
 
 const NAV_OFFSET = 104;
 
@@ -20,7 +22,7 @@ export default function Navbar({ locale = "hu", alternateHref }: { locale?: Loca
     { label: labels.camp, href: locale === "en" ? "/en/camp" : "/tanctabor" },
     { label: labels.schedule, href: locale === "en" ? "/en/schedule" : "/orarend" },
     { label: labels.services, href: locale === "en" ? "/en/services" : "/szolgaltatasok" },
-    { label: labels.studio, href: STUDIO_RENTAL_URL },
+    { label: labels.studio, href: locale === "en" ? STUDIO_RENTAL_URL_EN : STUDIO_RENTAL_URL },
     { label: labels.news, href: locale === "en" ? "/en/news" : "/hirek" },
     { label: labels.contact, href: "#elerhetoseg" },
   ], [labels, locale]);
