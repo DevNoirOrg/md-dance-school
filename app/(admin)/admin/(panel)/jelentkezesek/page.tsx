@@ -36,6 +36,7 @@ async function ApplicationsPageContent({ searchParams }: { searchParams: SP }) {
           createdAt: a.createdAt,
           status: a.status,
           name: a.nev,
+          tag: a.language === "en" ? "EN" : undefined,
           detail: `${a.turnus.join(" · ")} · ${a.fizetes}`,
         }))
       : (await listClassApplications(status)).map((a) => ({
@@ -44,7 +45,7 @@ async function ApplicationsPageContent({ searchParams }: { searchParams: SP }) {
           createdAt: a.createdAt,
           status: a.status,
           name: a.nev,
-          tag: a.szuloNev ? "16 év alatti" : undefined,
+          tag: [a.language === "en" ? "EN" : "", a.szuloNev ? "16 év alatti" : ""].filter(Boolean).join(" · ") || undefined,
           detail: a.classes.join(" · "),
         }));
   const total = Object.values(counts).reduce((a, b) => a + b, 0);

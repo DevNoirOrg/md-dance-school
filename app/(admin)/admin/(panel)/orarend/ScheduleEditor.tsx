@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { saveSchedule } from "@/app/actions/admin";
+import LanguageEditor from "@/components/admin/LanguageEditor";
 import { Button, Field, IconButton, PageHeader, SaveBar, inputCls, isSame, useSaver } from "@/components/admin/ui";
 import type { EditInfo } from "@/lib/admin-data";
 import type { Room } from "@/lib/content-types";
@@ -24,6 +25,7 @@ type ERoom = {
   shortName: string;
   headings: string[];
   columns: Cols;
+  en?: Room["en"];
 };
 
 let seq = 0;
@@ -37,17 +39,20 @@ function fromRooms(rooms: Room[]): ERoom[] {
     shortName: r.shortName,
     headings: r.columns.map((c) => c.heading),
     columns: r.columns.map((col) => col.classes.map((c) => ({ key: c.id, id: c.id, time: c.time, title: c.title }))),
+    en: r.en,
   }));
 }
 
-function toPayload(hint: string, rooms: ERoom[]) {
+function toPayload(hint: string, englishHint: string, rooms: ERoom[]) {
   return {
     hint,
+    en: { hint: englishHint },
     rooms: rooms.map((r) => ({
       id: r.id,
       name: r.name,
       shortName: r.shortName,
       headings: r.headings,
+      en: r.en,
       columns: r.columns.map((col) => col.map(({ id, time, title }) => ({ id, time, title }))),
     })),
   };
@@ -55,84 +60,25 @@ function toPayload(hint: string, rooms: ERoom[]) {
 
 type DragRef = { col: number; index: number } | null;
 
-export default function ScheduleEditor({ initial, initialHint, info }: { initial: Room[]; initialHint: string; info: EditInfo }) {
+export default function ScheduleEditor({ initial, initialHint, initialEnglishHint, info }: { initial: Room[]; initialHint: string; initialEnglishHint: string; info: EditInfo }) {
   const [saved, setSaved] = useState<ERoom[]>(() => fromRooms(initial));
   const [rooms, setRooms] = useState<ERoom[]>(() => fromRooms(initial));
   const [savedHint, setSavedHint] = useState(initialHint);
   const [hint, setHint] = useState(initialHint);
+  const [savedEnglishHint, setSavedEnglishHint] = useState(initialEnglishHint);
+  const [englishHint, setEnglishHint] = useState(initialEnglishHint);
   const [activeKey, setActiveKey] = useState<string>(() => rooms[0]?.key ?? "");
   const [drag, setDrag] = useState<DragRef>(null);
   const [dropCol, setDropCol] = useState<number | null>(null);
   const { pending, status, save } = useSaver();
 
-  const ri = Math.max(0, rooms.findIndex((r) => r.key === activeKey));
-  const room = rooms[ri];
-
-  const updateRoom = (patch: Partial<ERoom> | ((r: ERoom) => ERoom)) =>
-    setRooms((prev) => prev.map((r, i) => (i === ri ? (typeof patch === "function" ? patch(r) : { ...r, ...patch }) : r)));
-
-  const updateCols = (fn: (cols: Cols) => Cols) =>
-    updateRoom((r) => ({ ...r, columns: fn(r.columns.map((c) => [...c])) }));
-
-  /** Oszlopok száma (1–3). Csökkentéskor a megszűnő oszlopok órái az utolsó megmaradóba kerülnek. */
-  function setColumnCount(n: number) {
-    if (!room || n === room.columns.length) return;
-    if (n < room.columns.length) {
-      const moved = room.columns.slice(n).flat().length;
-      if (moved && !window.confirm(`A megszűnő oszlop(ok) ${moved} órája átkerül a(z) ${n}. oszlopba. Folytatod?`)) return;
-    }
-    updateRoom((r) => {
-      if (n > r.columns.length) {
-        const add = n - r.columns.length;
-        return {
-          ...r,
-          headings: [...r.headings, ...Array<string>(add).fill("")],
-          columns: [...r.columns, ...Array.from({ length: add }, (): EClass[] => [])],
-        };
-      }
-      const columns = r.columns.slice(0, n).map((c) => [...c]);
-      columns[n - 1].push(...r.columns.slice(n).flat());
-      return { ...r, headings: r.headings.slice(0, n), columns };
-    });
-  }
-
-  const moveClass = (from: { col: number; index: number }, to: { col: number; index: number }) =>
-    updateCols((cols) => {
-      const [item] = cols[from.col].splice(from.index, 1);
-      let idx = to.index;
-      if (from.col === to.col && from.index < to.index) idx -= 1;
-      cols[to.col].splice(Math.max(0, Math.min(idx, cols[to.col].length)), 0, item);
-      return cols;
-    });
-
-  const setClass = (col: number, index: number, patch: Partial<EClass>) =>
-    updateCols((cols) => {
-      cols[col][index] = { ...cols[col][index], ...patch };
-      return cols;
-    });
-
-  function addRoom() {
-    const nr: ERoom = {
-      key: k(),
-      name: "Új terem",
-      shortName: "Új",
-      headings: [...(room?.headings ?? ["Hétfő - Szerda", "Kedd - Csütörtök", "Péntek"])],
-      columns: (room?.headings ?? ["", "", ""]).map((): EClass[] => []),
-    };
-    setRooms((p) => [...p, nr]);
-    setActiveKey(nr.key);
-  }
-
-  function deleteRoom() {
-    if (!room) return;
-    const n = room.columns.flat().length;
-    if (!window.confirm(`Biztosan törlöd a(z) „${room.name}” termet${n ? ` és a benne lévő ${n} órát` : ""}? (Mentéskor lesz végleges.)`)) return;
-    const next = rooms.filter((_, i) => i !== ri);
-    setRooms(next);
-    setActiveKey(next[0]?.key ?? "");
-  }
-
-  const dirty = !isSame(toPayload(hint, rooms), toPayload(savedHint, saved));
+  const languageValue = { hint, rooms, en: { hint: englishHint, rooms: rooms.map((item) => item.en ?? {}) } };
+  const updateLanguageValue = (value: typeof languageValue) => {
+    setHint(value.hint);
+    setEnglishHint(value.en.hint ?? "");
+    setRooms(value.rooms.map((item, index) => ({ ...item, en: value.en.rooms?.[index] as Room["en"] })));
+  };
+  const dirty = !isSame(toPayload(hint, englishHint, rooms), toPayload(savedHint, savedEnglishHint, saved));
 
   return (
     <div>
@@ -141,6 +87,78 @@ export default function ScheduleEditor({ initial, initialHint, info }: { initial
         description="Termenként (fülenként) 1–4 oszlop (napok). Az órákat húzással vagy a nyilakkal rendezheted, oszlopok között is. A kiválasztott óra chipje magától készül: „Rövid név · oszlopcím kezdés”."
       />
 
+      <LanguageEditor value={languageValue} onChange={updateLanguageValue}>
+      {(x, setX, locale) => {
+        const hint = x.hint;
+        const rooms = x.rooms;
+        const setHint = (next: string) => setX({ ...x, hint: next });
+        const setRooms = (next: ERoom[] | ((previous: ERoom[]) => ERoom[])) =>
+          setX({ ...x, rooms: typeof next === "function" ? next(rooms) : next });
+        const ri = Math.max(0, rooms.findIndex((candidate) => candidate.key === activeKey));
+        const room = rooms[ri];
+        const updateRoom = (patch: Partial<ERoom> | ((current: ERoom) => ERoom)) =>
+          setRooms((previous) => previous.map((candidate, index) =>
+            index === ri ? (typeof patch === "function" ? patch(candidate) : { ...candidate, ...patch }) : candidate,
+          ));
+        const updateCols = (update: (columns: Cols) => Cols) =>
+          updateRoom((current) => ({ ...current, columns: update(current.columns.map((column) => [...column])) }));
+        const setColumnCount = (count: number) => {
+          if (!room || count === room.columns.length || locale === "en") return;
+          if (count < room.columns.length) {
+            const moved = room.columns.slice(count).flat().length;
+            if (moved && !window.confirm(`A megszűnő oszlop(ok) ${moved} órája átkerül a(z) ${count}. oszlopba. Folytatod?`)) return;
+          }
+          updateRoom((current) => {
+            if (count > current.columns.length) {
+              const add = count - current.columns.length;
+              return {
+                ...current,
+                headings: [...current.headings, ...Array<string>(add).fill("")],
+                columns: [...current.columns, ...Array.from({ length: add }, (): EClass[] => [])],
+              };
+            }
+            const columns = current.columns.slice(0, count).map((column) => [...column]);
+            columns[count - 1].push(...current.columns.slice(count).flat());
+            return { ...current, headings: current.headings.slice(0, count), columns };
+          });
+        };
+        const moveClass = (from: { col: number; index: number }, to: { col: number; index: number }) => {
+          if (locale === "en") return;
+          updateCols((columns) => {
+            const [item] = columns[from.col].splice(from.index, 1);
+            let index = to.index;
+            if (from.col === to.col && from.index < to.index) index -= 1;
+            columns[to.col].splice(Math.max(0, Math.min(index, columns[to.col].length)), 0, item);
+            return columns;
+          });
+        };
+        const setClass = (column: number, index: number, patch: Partial<EClass>) =>
+          updateCols((columns) => {
+            columns[column][index] = { ...columns[column][index], ...patch };
+            return columns;
+          });
+        const addRoom = () => {
+          if (locale === "en") return;
+          const nextRoom: ERoom = {
+            key: k(),
+            name: "Új terem",
+            shortName: "Új",
+            headings: [...(room?.headings ?? ["Hétfő - Szerda", "Kedd - Csütörtök", "Péntek"])],
+            columns: (room?.headings ?? ["", "", ""]).map((): EClass[] => []),
+          };
+          setRooms((previous) => [...previous, nextRoom]);
+          setActiveKey(nextRoom.key);
+        };
+        const deleteRoom = () => {
+          if (!room || locale === "en") return;
+          const count = room.columns.flat().length;
+          if (!window.confirm(`Biztosan törlöd a(z) „${room.name}” termet${count ? ` és a benne lévő ${count} órát` : ""}? (Mentéskor lesz végleges.)`)) return;
+          const next = rooms.filter((_, index) => index !== ri);
+          setRooms(next);
+          setActiveKey(next[0]?.key ?? "");
+        };
+        return (
+      <>
       <div className="mb-5 rounded-[1.75rem] bg-white p-5 shadow-[0_10px_30px_-18px_rgba(13,13,13,0.35)] md:p-6">
         <Field label="Felirat az ÓRAREND cím alatt" htmlFor="hint">
           <input id="hint" className={inputCls} value={hint} onChange={(e) => setHint(e.target.value)} />
@@ -149,7 +167,7 @@ export default function ScheduleEditor({ initial, initialHint, info }: { initial
 
       {/* Terem-fülek */}
       <div className="mb-5 flex flex-wrap items-center gap-2">
-        {rooms.map((r) => (
+        {rooms.map((r, roomIndex) => (
           <button
             key={r.key}
             type="button"
@@ -158,12 +176,12 @@ export default function ScheduleEditor({ initial, initialHint, info }: { initial
               r.key === room?.key ? "bg-ink text-white" : "bg-white text-slate-500 hover:text-ink"
             }`}
           >
-            {r.name || "Névtelen terem"}
+            {r.name || languageValue.rooms[roomIndex]?.name || "Névtelen terem"}
             <span className="ml-2 rounded-full bg-md-pale px-1.5 py-0.5 text-[10px] text-md-teal">{r.columns.flat().length}</span>
           </button>
         ))}
         {rooms.length < 6 && (
-          <Button variant="ghost" onClick={addRoom}>
+          <Button variant="ghost" onClick={addRoom} disabled={locale === "en"}>
             + Új terem
           </Button>
         )}
@@ -184,6 +202,7 @@ export default function ScheduleEditor({ initial, initialHint, info }: { initial
                   <button
                     key={n}
                     type="button"
+                    disabled={locale === "en"}
                     aria-label={`${n} oszlop`}
                     aria-pressed={room.columns.length === n}
                     onClick={() => setColumnCount(n)}
@@ -196,7 +215,7 @@ export default function ScheduleEditor({ initial, initialHint, info }: { initial
                 ))}
               </div>
             </Field>
-            <Button variant="danger" onClick={deleteRoom} disabled={rooms.length <= 1}>
+            <Button variant="danger" onClick={deleteRoom} disabled={rooms.length <= 1 || locale === "en"}>
               Terem törlése
             </Button>
           </div>
@@ -207,6 +226,7 @@ export default function ScheduleEditor({ initial, initialHint, info }: { initial
                 <div
                   key={ci}
                   onDragOver={(e) => {
+                    if (locale === "en") return;
                     e.preventDefault();
                     setDropCol(ci);
                   }}
@@ -238,7 +258,7 @@ export default function ScheduleEditor({ initial, initialHint, info }: { initial
                   {col.map((c, i) => (
                     <div
                       key={c.key}
-                      draggable
+                      draggable={locale === "hu"}
                       onDragStart={(e) => {
                         e.dataTransfer.effectAllowed = "move";
                         setDrag({ col: ci, index: i });
@@ -263,20 +283,21 @@ export default function ScheduleEditor({ initial, initialHint, info }: { initial
                           ⋮⋮
                         </span>
                         <div className="flex">
-                          <IconButton label="Előző oszlopba" disabled={ci === 0} onClick={() => moveClass({ col: ci, index: i }, { col: ci - 1, index: room.columns[ci - 1].length })}>
+                          <IconButton label="Előző oszlopba" disabled={ci === 0 || locale === "en"} onClick={() => moveClass({ col: ci, index: i }, { col: ci - 1, index: room.columns[ci - 1].length })}>
                             ←
                           </IconButton>
-                          <IconButton label="Feljebb" disabled={i === 0} onClick={() => moveClass({ col: ci, index: i }, { col: ci, index: i - 1 })}>
+                          <IconButton label="Feljebb" disabled={i === 0 || locale === "en"} onClick={() => moveClass({ col: ci, index: i }, { col: ci, index: i - 1 })}>
                             ↑
                           </IconButton>
-                          <IconButton label="Lejjebb" disabled={i === col.length - 1} onClick={() => moveClass({ col: ci, index: i }, { col: ci, index: i + 2 })}>
+                          <IconButton label="Lejjebb" disabled={i === col.length - 1 || locale === "en"} onClick={() => moveClass({ col: ci, index: i }, { col: ci, index: i + 2 })}>
                             ↓
                           </IconButton>
-                          <IconButton label="Következő oszlopba" disabled={ci === room.columns.length - 1} onClick={() => moveClass({ col: ci, index: i }, { col: ci + 1, index: room.columns[ci + 1].length })}>
+                          <IconButton label="Következő oszlopba" disabled={ci === room.columns.length - 1 || locale === "en"} onClick={() => moveClass({ col: ci, index: i }, { col: ci + 1, index: room.columns[ci + 1].length })}>
                             →
                           </IconButton>
                           <IconButton
                             label="Óra törlése"
+                            disabled={locale === "en"}
                             className="hover:!bg-red-50 hover:!text-red-600"
                             onClick={() =>
                               updateCols((cols) => {
@@ -294,6 +315,7 @@ export default function ScheduleEditor({ initial, initialHint, info }: { initial
                         className="w-full rounded-lg border-2 border-transparent bg-white px-2.5 py-1.5 text-[15px] font-bold text-ink placeholder:text-slate-300 focus:border-md-cyan focus:outline-none"
                         placeholder="18:30-20:00"
                         value={c.time}
+                        disabled={locale === "en"}
                         onChange={(e) => setClass(ci, i, { time: e.target.value })}
                       />
                       <input
@@ -308,6 +330,7 @@ export default function ScheduleEditor({ initial, initialHint, info }: { initial
 
                   <button
                     type="button"
+                    disabled={locale === "en"}
                     onClick={() =>
                       updateCols((cols) => {
                         cols[ci].push({ key: k(), time: "", title: "" });
@@ -326,6 +349,10 @@ export default function ScheduleEditor({ initial, initialHint, info }: { initial
       ) : (
         <p className="text-sm text-slate-500">Nincs terem. Adj hozzá egyet!</p>
       )}
+      </>
+        );
+      }}
+      </LanguageEditor>
 
       <SaveBar
         dirty={dirty}
@@ -334,13 +361,15 @@ export default function ScheduleEditor({ initial, initialHint, info }: { initial
         info={info}
         onReset={() => {
           setHint(savedHint);
+          setEnglishHint(savedEnglishHint);
           setRooms(saved);
           setActiveKey(saved[0]?.key ?? "");
         }}
         onSave={() =>
-          save(() => saveSchedule(toPayload(hint, rooms)), undefined, () => {
+          save(() => saveSchedule(toPayload(hint, englishHint, rooms)), undefined, () => {
             setSaved(rooms);
             setSavedHint(hint);
+            setSavedEnglishHint(englishHint);
           })
         }
       />

@@ -15,17 +15,17 @@ export async function GET(request: Request) {
   let header: string[];
   let rows: (string | null)[][];
   if (kind === "tabor") {
-    header = ["Beküldve", "Státusz", "Táborlakó", "E-mail", "Telefon", "Születési dátum", "Pólóméret", "Turnus", "Fizetési mód",
+    header = ["Beküldve", "Státusz", "Nyelv", "Táborlakó", "E-mail", "Telefon", "Születési dátum", "Pólóméret", "Turnus", "Fizetési mód",
       "Szülő neve", "Szülő telefon", "Lakcím", "Fontos tudnivaló", "Honnan hallott", "Kitöltő", "Belső megjegyzés"];
     rows = (await listCampApplications(status)).map((a) => [
-      when(a.createdAt), label(a.status), a.nev, a.email, a.telefon, a.szuletes, a.polo, a.turnus.join(" | "), a.fizetes,
+      when(a.createdAt), label(a.status), a.language === "en" ? "angol" : "magyar", a.nev, a.email, a.telefon, a.szuletes, a.polo, a.turnus.join(" | "), a.fizetes,
       a.szuloNev, a.szuloTelefon, a.lakcim, a.tudnivalo, a.honnan, a.kitolto, a.adminNote,
     ]);
   } else {
-    header = ["Beküldve", "Státusz", "Név", "E-mail", "Telefon", "Születési dátum", "Szülő neve", "Szülő e-mail",
+    header = ["Beküldve", "Státusz", "Nyelv", "Név", "E-mail", "Telefon", "Születési dátum", "Szülő neve", "Szülő e-mail",
       "Tánctapasztalat", "Órák", "Megjegyzés", "Belső megjegyzés"];
     rows = (await listClassApplications(status)).map((a) => [
-      when(a.createdAt), label(a.status), a.nev, a.email, a.telefon, a.szuletes, a.szuloNev, a.szuloEmail,
+      when(a.createdAt), label(a.status), a.language === "en" ? "angol" : "magyar", a.nev, a.email, a.telefon, a.szuletes, a.szuloNev, a.szuloEmail,
       a.tapasztalat, a.classes.join(" | "), a.megjegyzes, a.adminNote,
     ]);
   }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { saveFormOptions } from "@/app/actions/admin";
+import LanguageEditor from "@/components/admin/LanguageEditor";
 import { Card, PageHeader, SaveBar, StringListEditor, isSame, useSaver } from "@/components/admin/ui";
 import type { EditInfo } from "@/lib/admin-data";
 import type { FormOptions } from "@/lib/content-types";
@@ -17,14 +18,18 @@ export default function FormOptionsEditor({ initial, info }: { initial: FormOpti
         title="Űrlap opciók"
         description="Az órajelentkezési űrlap legördülő listái. (A tánctábor űrlap opciói a Tánctábor menüpontban vannak.)"
       />
+      <LanguageEditor value={v} onChange={setV}>
+      {(x, setX) => (
       <div className="grid gap-6 md:grid-cols-2">
         <Card title="„Táncoltál már korábban?”">
-          <StringListEditor items={v.experience} onChange={(experience) => setV((p) => ({ ...p, experience }))} addLabel="+ Új opció" />
+          <StringListEditor items={x.experience} onChange={(experience) => setX({ ...x, experience })} addLabel="+ Új opció" />
         </Card>
         <Card title="„Mikortól kezdenél?”">
-          <StringListEditor items={v.start} onChange={(start) => setV((p) => ({ ...p, start }))} addLabel="+ Új opció" />
+          <StringListEditor items={x.start} onChange={(start) => setX({ ...x, start })} addLabel="+ Új opció" />
         </Card>
       </div>
+      )}
+      </LanguageEditor>
       <SaveBar
         dirty={!isSame(v, saved)}
         pending={pending}

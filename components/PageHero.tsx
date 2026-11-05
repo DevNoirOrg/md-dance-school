@@ -1,6 +1,8 @@
 "use client";
 import { motion } from "motion/react";
 import HalftoneDots from "./HalftoneDots";
+import LanguageSwitch from "./LanguageSwitch";
+import type { Locale } from "@/lib/i18n";
 
 /** Aloldalak fekete, fotós fejléce (Órarend, Szolgáltatások). */
 export default function PageHero({
@@ -11,6 +13,7 @@ export default function PageHero({
   dots = false,
   overlay = "linear-gradient(0deg, rgba(0,0,0,0.76), rgba(0,0,0,0.48))",
   className = "min-h-[380px] pb-20 sm:min-h-[420px]",
+  locale = "hu",
 }: {
   title: string;
   lead?: string;
@@ -19,12 +22,16 @@ export default function PageHero({
   dots?: boolean;
   overlay?: string;
   className?: string;
+  locale?: Locale;
 }) {
   return (
     <section
       className={`relative flex items-center justify-center bg-black px-5 pt-32 text-center sm:pt-36 ${className}`}
       style={{ backgroundImage: `${overlay}, url('${image}')`, backgroundPosition: position, backgroundSize: "cover", overflowX: "clip" }}
     >
+      <div className="absolute right-5 top-6 z-20 rounded-full bg-black/35 px-4 py-2 text-white backdrop-blur-sm sm:right-8 sm:top-8">
+        <LanguageSwitch locale={locale} />
+      </div>
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-white to-transparent" />
       {dots && <HalftoneDots size={240} zIndex={1} style={{ bottom: -70, left: -90 }} />}
       <motion.div

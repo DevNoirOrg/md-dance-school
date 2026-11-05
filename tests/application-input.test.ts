@@ -58,6 +58,11 @@ test("órajelentkezés: hiányzó hozzájárulás, érvénytelen telefon, óra n
   assert.equal(checkClassApplication({ ...adult, szuletes: "2030-01-01" }, o, NOW).ok, false);
 });
 
+test("angol órajelentkezés: a validáció angol hibaüzenetet ad", () => {
+  const r = checkClassApplication({ ...adult, locale: "en", email: "invalid" }, defaultSettings.form_options, NOW);
+  assert.deepEqual(r, { ok: false, error: "Some fields are invalid. Please check your information and try again." });
+});
+
 const camper = {
   nev: "Kovács Emma",
   email: "szulo@pelda.hu",
@@ -84,4 +89,9 @@ test("táborjelentkezés: lezárt turnus, rossz telefon, ismeretlen pólóméret
   assert.equal(checkCampApplication({ ...camper, telefon: "12" }, camp, NOW).ok, false);
   assert.equal(checkCampApplication({ ...camper, polo: "XXS" }, camp, NOW).ok, false);
   assert.equal(checkCampApplication({ ...camper, turnus: [] }, camp, NOW).ok, false);
+});
+
+test("angol táborjelentkezés: a validáció angol hibaüzenetet ad", () => {
+  const r = checkCampApplication({ ...camper, locale: "en", telefon: "bad" }, defaultSettings.camp, NOW);
+  assert.deepEqual(r, { ok: false, error: "Some fields are invalid. Please check your information and try again." });
 });

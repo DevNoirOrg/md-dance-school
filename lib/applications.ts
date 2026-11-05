@@ -59,6 +59,7 @@ const meta = (r: MetaRow): Meta => ({
 //  Órajelentkezések
 // ---------------------------------------------------------------------
 export type ClassApplication = Meta & {
+  language: "hu" | "en";
   nev: string;
   email: string;
   telefon: string;
@@ -71,6 +72,7 @@ export type ClassApplication = Meta & {
 };
 
 type ClassRow = MetaRow & {
+  language: "hu" | "en";
   nev: string;
   email: string;
   telefon: string;
@@ -84,6 +86,7 @@ type ClassRow = MetaRow & {
 
 const mapClass = (r: ClassRow): ClassApplication => ({
   ...meta(r),
+  language: r.language,
   nev: r.nev,
   email: r.email,
   telefon: r.telefon,
@@ -113,6 +116,7 @@ export async function getClassApplication(id: string): Promise<ClassApplication 
 //  Tánctábor-jelentkezések
 // ---------------------------------------------------------------------
 export type CampApplication = Meta & {
+  language: "hu" | "en";
   nev: string;
   email: string;
   telefon: string;
@@ -129,6 +133,7 @@ export type CampApplication = Meta & {
 };
 
 type CampRow = MetaRow & {
+  language: "hu" | "en";
   nev: string;
   email: string;
   telefon: string;
@@ -146,6 +151,7 @@ type CampRow = MetaRow & {
 
 const mapCamp = (r: CampRow): CampApplication => ({
   ...meta(r),
+  language: r.language,
   nev: r.nev,
   email: r.email,
   telefon: r.telefon,

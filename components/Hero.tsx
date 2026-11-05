@@ -3,8 +3,9 @@ import { motion } from "motion/react";
 import HalftoneDots from "@/components/HalftoneDots";
 import type { HeroContent } from "@/lib/content-types";
 import { mediaUrl } from "@/lib/format";
+import type { Locale } from "@/lib/i18n";
 
-export default function Hero({ hero }: { hero: HeroContent }) {
+export default function Hero({ hero }: { hero: HeroContent; locale?: Locale }) {
   return (
     <section
       id="hero"

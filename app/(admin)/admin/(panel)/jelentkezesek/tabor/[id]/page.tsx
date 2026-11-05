@@ -32,6 +32,7 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
         <Card className="self-start">
           <dl className="divide-y divide-slate-100">
             <DetailRow k="Beküldve">{new Date(a.createdAt).toLocaleString("hu-HU")}</DetailRow>
+            <DetailRow k="Nyelv">{a.language === "en" ? "angol" : "magyar"}</DetailRow>
             <DetailRow k="Turnus">
               <ul className="space-y-1">
                 {a.turnus.map((t) => (

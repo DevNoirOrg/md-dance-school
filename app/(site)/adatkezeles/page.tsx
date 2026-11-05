@@ -8,6 +8,7 @@ import { parsePrivacyText, type PrivacyBlock } from "@/lib/privacy";
 export const metadata: Metadata = {
   title: "Adatkezelési tájékoztató – MD Dance School",
   description: "Az MD Dance School (Master Dance Tánciskola) adatkezelési tájékoztatója.",
+  alternates: { canonical: "/adatkezeles", languages: { hu: "/adatkezeles", en: "/en/privacy" } },
 };
 
 function Blocks({ blocks }: { blocks: PrivacyBlock[] }) {

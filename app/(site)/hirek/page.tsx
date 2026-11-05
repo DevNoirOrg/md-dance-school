@@ -9,6 +9,7 @@ import { mediaUrl } from "@/lib/format";
 export const metadata: Metadata = {
   title: "Hírek – MD Dance School",
   description: "Az MD Dance School hírei és eseményei: workshopok, buli, új órák.",
+  alternates: { canonical: "/hirek", languages: { hu: "/hirek", en: "/en/news" } },
 };
 
 export default async function HirekPage() {

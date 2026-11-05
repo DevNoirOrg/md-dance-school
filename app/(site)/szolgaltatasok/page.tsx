@@ -7,6 +7,7 @@ import { getSiteContent } from "@/lib/content";
 export const metadata: Metadata = {
   title: "Szolgáltatások – MD Dance School",
   description: "Show, koreográfia és produkció rendezvényekre, színpadra és kamera elé — az MD Dance Company szolgáltatásai.",
+  alternates: { canonical: "/szolgaltatasok", languages: { hu: "/szolgaltatasok", en: "/en/services" } },
 };
 
 export default async function SzolgaltatasokPage() {

@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { createUploadTarget } from "@/app/actions/admin";
 import { MEDIA_BUCKET, mediaUrl } from "@/lib/format";
 import { supabaseBrowser } from "@/lib/supabase/browser";
+import { useEditingLocale } from "./LanguageEditorContext";
 import { Button } from "./ui";
 
 /*
@@ -95,6 +96,7 @@ export default function MediaField({
   aspectClass?: string;
   emptyLabel?: string;
 }) {
+  const translationMode = useEditingLocale() === "en";
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,11 +137,11 @@ export default function MediaField({
         )}
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button onClick={() => inputRef.current?.click()} disabled={busy}>
+        <Button onClick={() => inputRef.current?.click()} disabled={busy || translationMode}>
           {value ? "Csere" : kind === "image" ? "Kép feltöltése" : "Videó feltöltése"}
         </Button>
         {allowRemove && value && (
-          <Button variant="ghost" onClick={() => onChange(null)} disabled={busy}>
+          <Button variant="ghost" onClick={() => onChange(null)} disabled={busy || translationMode}>
             Eltávolítás
           </Button>
         )}
@@ -148,6 +150,7 @@ export default function MediaField({
         ref={inputRef}
         type="file"
         hidden
+        disabled={translationMode}
         accept={kind === "image" ? "image/*" : "video/mp4"}
         onChange={(e) => {
           const f = e.target.files?.[0];
@@ -163,4 +166,3 @@ export default function MediaField({
     </div>
   );
 }
-

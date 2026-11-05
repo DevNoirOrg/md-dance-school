@@ -1,35 +1,39 @@
 "use client";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { Menu, X } from "lucide-react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
+import LanguageSwitch from "./LanguageSwitch";
+import { t, type Locale } from "@/lib/i18n";
 
 // A stúdióbérlés ugyanezen a domainen, a /studio-berles alatt fut (a külön bérlés app szolgálja ki, lásd next.config.ts).
 const STUDIO_RENTAL_URL = "/studio-berles";
 
-const navLinks = [
-  { label: "Kezdőlap", href: "#hero" },
-  { label: "Tánctábor", href: "/tanctabor" },
-  { label: "Órarend", href: "/orarend" },
-  { label: "Szolgáltatások", href: "/szolgaltatasok" },
-  { label: "Stúdió bérlés", href: STUDIO_RENTAL_URL },
-  { label: "Elérhetőség", href: "#elerhetoseg" },
-];
-
 const NAV_OFFSET = 104;
 
-export default function Navbar() {
+export default function Navbar({ locale = "hu", alternateHref }: { locale?: Locale; alternateHref?: string }) {
+  const labels = t(locale).nav;
+  const home = locale === "en" ? "/en" : "/";
+  const navLinks = useMemo(() => [
+    { label: labels.home, href: "#hero" },
+    { label: labels.camp, href: locale === "en" ? "/en/camp" : "/tanctabor" },
+    { label: labels.schedule, href: locale === "en" ? "/en/schedule" : "/orarend" },
+    { label: labels.services, href: locale === "en" ? "/en/services" : "/szolgaltatasok" },
+    { label: labels.studio, href: STUDIO_RENTAL_URL },
+    { label: labels.news, href: locale === "en" ? "/en/news" : "/hirek" },
+    { label: labels.contact, href: "#elerhetoseg" },
+  ], [labels, locale]);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrollHref, setScrollHref] = useState(navLinks[0].href);
   const pathname = usePathname();
   const router = useRouter();
   // Aloldalon az útvonal szerinti menüpont aktív, a főoldalon a görgetés szerinti szekció.
   const activeHref =
-    pathname === "/" ? scrollHref : navLinks.some((link) => link.href === pathname) ? pathname : "";
+    pathname === home ? scrollHref : navLinks.some((link) => link.href === pathname) ? pathname : "";
 
   useEffect(() => {
-    if (pathname !== "/") return;
+    if (pathname !== home) return;
     const sections = navLinks
       .filter((link) => link.href.startsWith("#"))
       .map((link) => document.querySelector<HTMLElement>(link.href))
@@ -50,7 +54,7 @@ export default function Navbar() {
       cancelAnimationFrame(raf);
       window.removeEventListener("scroll", onScroll);
     };
-  }, [pathname]);
+  }, [pathname, home, navLinks]);
 
   const handleNavClick = (e: MouseEvent<HTMLAnchorElement>, href: string) => {
     if (href.startsWith("/") || /^https?:\/\//.test(href)) {
@@ -60,7 +64,7 @@ export default function Navbar() {
 
     e.preventDefault();
     if (pathname !== "/") {
-      router.push(`/${href}`);
+      router.push(`${home}${href}`);
       setMobileOpen(false);
       return;
     }
@@ -130,7 +134,7 @@ export default function Navbar() {
         >
           {/* Logo - balra igazítva, a középre igazított menün kívül */}
           <a
-            href={pathname === "/" ? "#hero" : "/#hero"}
+            href={pathname === home ? "#hero" : `${home}#hero`}
             style={{
               textDecoration: "none",
               flexShrink: 0,
@@ -164,8 +168,8 @@ export default function Navbar() {
             {navLinks.map((link) => {
               const isActive = activeHref === link.href;
               const href =
-                pathname !== "/" && link.href.startsWith("#")
-                  ? `/${link.href}`
+                pathname !== home && link.href.startsWith("#")
+                  ? `${home}${link.href}`
                   : link.href;
               return (
                 <a
@@ -198,10 +202,14 @@ export default function Navbar() {
             })}
           </div>
 
+          <div className="hidden-mobile absolute right-20 top-1/2 -translate-y-1/2 text-black md:right-8">
+            <LanguageSwitch locale={locale} alternateHref={alternateHref} />
+          </div>
+
           {/* Mobile burger */}
           <button
             onClick={() => setMobileOpen((v) => !v)}
-            aria-label="Menü"
+            aria-label={locale === "en" ? "Menu" : "Menü"}
             style={{
               display: "none",
               background: "none",
@@ -238,8 +246,8 @@ export default function Navbar() {
             {navLinks.map((link, i) => {
               const isActive = activeHref === link.href;
               const href =
-                pathname !== "/" && link.href.startsWith("#")
-                  ? `/${link.href}`
+                pathname !== home && link.href.startsWith("#")
+                  ? `${home}${link.href}`
                   : link.href;
               return (
                 <motion.a
@@ -264,6 +272,14 @@ export default function Navbar() {
                 </motion.a>
               );
             })}
+            <motion.div
+              initial={{ x: -16, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: navLinks.length * 0.04 }}
+              style={{ padding: "14px 32px" }}
+            >
+              <LanguageSwitch locale={locale} alternateHref={alternateHref} variant="light" />
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

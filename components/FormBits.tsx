@@ -1,5 +1,6 @@
 "use client";
 import type { ReactNode, SelectHTMLAttributes } from "react";
+import { t, type Locale } from "@/lib/i18n";
 
 /* Az űrlapok (órajelentkezés, tánctábor, „Írj nekünk”) közös elemei. */
 
@@ -38,12 +39,13 @@ export function Select({
   options,
   className,
   value,
+  locale = "hu",
   ...props
-}: SelectHTMLAttributes<HTMLSelectElement> & { options: string[]; value: string }) {
+}: SelectHTMLAttributes<HTMLSelectElement> & { options: string[]; value: string; locale?: Locale }) {
   return (
     <div className="relative">
       <select {...props} value={value} className={`${className} cursor-pointer appearance-none pr-12 ${value ? "" : "text-gray-400"}`}>
-        <option value="">Válassz…</option>
+        <option value="">{t(locale).form.choose}</option>
         {options.map((o) => (
           <option key={o} value={o} className="text-black">
             {o}

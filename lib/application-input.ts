@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ageFrom, EMAIL_RE, PARENT_REQUIRED_UNDER_AGE } from "./format.ts";
+import { t, type Locale } from "./i18n.ts";
 
 /*
   A két publikus jelentkezési űrlap (órák, tánctábor) szerveroldali ellenőrzése.
@@ -14,6 +15,7 @@ const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 //  Órajelentkezés
 // ---------------------------------------------------------------------
 export const classApplicationSchema = z.object({
+  locale: z.enum(["hu", "en"]).optional().default("hu"),
   nev: z.string().trim().min(1).max(200),
   email: z.string().trim().max(200).regex(EMAIL_RE),
   telefon: z
@@ -44,18 +46,21 @@ export function checkClassApplication(
   options: { experience: string[] },
   now?: Date,
 ): { ok: true; data: ClassApplicationData } | { ok: false; error: string } {
+  const locale: Locale =
+    typeof raw === "object" && raw !== null && "locale" in raw && raw.locale === "en" ? "en" : "hu";
+  const copy = t(locale).form;
   const parsed = classApplicationSchema.safeParse(raw);
-  if (!parsed.success) return { ok: false, error: "Valamelyik mező hibás. Ellenőrizd az adatokat, és próbáld újra." };
+  if (!parsed.success) return { ok: false, error: copy.invalidFields };
   const input = parsed.data;
   const age = ageFrom(input.szuletes, now);
-  if (age === null || age < 0 || age > 100) return { ok: false, error: "Ellenőrizd a születési dátumot." };
+  if (age === null || age < 0 || age > 100) return { ok: false, error: copy.dateCheck };
   const minor = age < PARENT_REQUIRED_UNDER_AGE;
   // A szülő neve/e-mailje NEM kötelező (sem kiskorúnál) — de ha megadták az e-mailt, legyen érvényes.
   if (input.szulo_email && !EMAIL_RE.test(input.szulo_email)) {
-    return { ok: false, error: "Add meg a szülő érvényes e-mail címét, vagy hagyd üresen." };
+    return { ok: false, error: copy.parentEmailError };
   }
   if (!options.experience.includes(input.tapasztalat)) {
-    return { ok: false, error: "Valamelyik választott lehetőség már nem érvényes. Töltsd újra az oldalt." };
+    return { ok: false, error: copy.optionError };
   }
   return { ok: true, data: { ...input, minor } };
 }
@@ -64,6 +69,7 @@ export function checkClassApplication(
 //  Tánctábor-jelentkezés
 // ---------------------------------------------------------------------
 export const campApplicationSchema = z.object({
+  locale: z.enum(["hu", "en"]).optional().default("hu"),
   nev: z.string().trim().min(1).max(200),
   email: z.string().trim().max(200).regex(EMAIL_RE),
   telefon: z
@@ -97,14 +103,17 @@ export function checkCampApplication(
   },
   now?: Date,
 ): { ok: true; data: CampApplicationData } | { ok: false; error: string } {
+  const locale: Locale =
+    typeof raw === "object" && raw !== null && "locale" in raw && raw.locale === "en" ? "en" : "hu";
+  const copy = t(locale).camp;
   const parsed = campApplicationSchema.safeParse(raw);
-  if (!parsed.success) return { ok: false, error: "Valamelyik mező hibás. Ellenőrizd az adatokat, és próbáld újra." };
+  if (!parsed.success) return { ok: false, error: copy.invalidFields };
   const input = parsed.data;
   const age = ageFrom(input.szuletes, now);
-  if (age === null || age < 0 || age > 100) return { ok: false, error: "Ellenőrizd a születési dátumot." };
+  if (age === null || age < 0 || age > 100) return { ok: false, error: copy.errDate };
   const open = new Set(camp.turnusok.filter((t) => !t.closed).map((t) => t.id));
   if (!input.turnus.every((t) => open.has(t))) {
-    return { ok: false, error: "A választott turnus már nem elérhető. Töltsd újra az oldalt, és válassz újra." };
+    return { ok: false, error: copy.sessionUnavailable };
   }
   const f = camp.form;
   if (
@@ -113,10 +122,10 @@ export function checkCampApplication(
     !f.sources.includes(input.honnan) ||
     !f.fillers.includes(input.kitolto)
   ) {
-    return { ok: false, error: "Valamelyik választott lehetőség már nem érvényes. Töltsd újra az oldalt." };
+    return { ok: false, error: copy.optionUnavailable };
   }
   if (input.szulo_telefon && !PHONE_RE.test(input.szulo_telefon)) {
-    return { ok: false, error: "Ellenőrizd a szülő telefonszámát." };
+    return { ok: false, error: copy.parentPhoneCheck };
   }
   return { ok: true, data: input };
 }

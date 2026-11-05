@@ -14,7 +14,17 @@ async function Content() {
     getSetting("services"),
     getEditInfo("texts"),
   ]);
-  return <TextsEditor initial={{ hero, about, services }} info={info} />;
+  return (
+    <TextsEditor
+      initial={{
+        hero,
+        about,
+        services,
+        en: { hero: hero.en, about: about.en, services: services.en },
+      }}
+      info={info}
+    />
+  );
 }
 
 export default function Page() {
