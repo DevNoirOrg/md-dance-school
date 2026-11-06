@@ -51,12 +51,15 @@ export default async function NewsArticlePage({ params }: Props) {
           <h1 className="section-title mt-3 text-4xl text-black sm:text-5xl">{item.title}</h1>
           {item.excerpt && <p className="mt-6 text-lg font-semibold leading-relaxed text-gray-500">{item.excerpt}</p>}
 
-          {item.imagePath && (
-            <img src={mediaUrl(item.imagePath)} alt={item.imageAlt || item.title} className="mt-10 w-full rounded-[2rem] shadow-lg" />
-          )}
-
           {/* A szöveget az admin WYSIWYG szerkesztője írja; mentéskor szerveroldalon megtisztítjuk. */}
           <div className="news-body mt-10" dangerouslySetInnerHTML={{ __html: item.bodyHtml }} />
+
+          {/* A hír képe a szöveg után (hogy ne kelljen sokat görgetni a szövegig); legfeljebb a képernyő 80%-a, kattintásra teljes méretben. */}
+          {item.imagePath && (
+            <a href={mediaUrl(item.imagePath)} target="_blank" rel="noopener noreferrer" title="Kép megnyitása teljes méretben" className="mt-12 block">
+              <img src={mediaUrl(item.imagePath)} alt={item.imageAlt || item.title} className="mx-auto block h-auto max-h-[80vh] w-auto max-w-full rounded-[2rem] shadow-lg" />
+            </a>
+          )}
 
           <div className="mt-14 flex flex-wrap gap-4">
             <Link

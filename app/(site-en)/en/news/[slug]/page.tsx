@@ -53,8 +53,13 @@ export default async function EnglishNewsArticle({ params }: Props) {
           <p className="mt-6 font-mono text-[11px] font-bold text-md-deep">{article.dateLabel}</p>
           <h1 className="section-title mt-3 text-4xl text-black sm:text-5xl">{article.title}</h1>
           {article.excerpt && <p className="mt-6 text-lg font-semibold leading-relaxed text-gray-500">{article.excerpt}</p>}
-          {article.imagePath && <img src={mediaUrl(article.imagePath)} alt={article.imageAlt || article.title} className="mt-10 w-full rounded-[2rem] shadow-lg" />}
           <div className="news-body mt-10" dangerouslySetInnerHTML={{ __html: article.bodyHtml }} />
+          {/* The image comes after the text; at most 80% of the screen height, full size on click. */}
+          {article.imagePath && (
+            <a href={mediaUrl(article.imagePath)} target="_blank" rel="noopener noreferrer" title="Open image in full size" className="mt-12 block">
+              <img src={mediaUrl(article.imagePath)} alt={article.imageAlt || article.title} className="mx-auto block h-auto max-h-[80vh] w-auto max-w-full rounded-[2rem] shadow-lg" />
+            </a>
+          )}
           <div className="mt-14 flex flex-wrap gap-4">
             <Link href="/en/schedule" className="rounded-2xl bg-ink px-8 py-5 text-xs font-extrabold uppercase tracking-[0.2em] text-white shadow-xl transition-colors hover:bg-md-teal">{copy.apply}</Link>
             <Link href="/en/news" className="rounded-2xl border-2 border-black/10 px-8 py-5 text-xs font-extrabold uppercase tracking-[0.2em] text-black transition-colors hover:border-md-deep hover:text-md-deep">{copy.allNews}</Link>
