@@ -17,7 +17,7 @@ import { Button } from "./ui";
 */
 
 const MAX_IMAGE_SIDE = 1600;
-const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 15 * 1024 * 1024;
 const MAX_IMAGE_INPUT_BYTES = 25 * 1024 * 1024;
 
 /** Kép betöltése rajzoláshoz. Az SVG-t (pl. logók) a createImageBitmap nem mindenhol tudja → <img>-en át. */
@@ -55,7 +55,7 @@ async function toWebp(file: File): Promise<Blob> {
 }
 
 /**
- * Fájl feltöltése a Storage-ba (kép → WebP, max. 1600 px; videó → MP4, max. 50 MB).
+ * Fájl feltöltése a Storage-ba (kép → WebP, max. 1600 px; videó → MP4, max. 15 MB; a fájlnév egyedi, ezért a böngésző 1 évig gyorsítótárazhatja).
  * Visszaadja a fájl útvonalát (pl. "images/2026/….webp"). Hiba esetén kivételt dob.
  */
 export async function uploadMedia(kind: "image" | "video", file: File): Promise<string> {
@@ -68,7 +68,7 @@ export async function uploadMedia(kind: "image" | "video", file: File): Promise<
     contentType = "image/webp";
   } else {
     if (file.type !== "video/mp4") throw new Error("Csak MP4 videó tölthető fel.");
-    if (file.size > MAX_VIDEO_BYTES) throw new Error("A videó túl nagy (max. 50 MB). Tömörítsd, vagy vágd rövidebbre.");
+    if (file.size > MAX_VIDEO_BYTES) throw new Error("A videó túl nagy (max. 15 MB). Tömörítsd 720p-re hang nélkül (pl. HandBrake), egy háttérvideóhoz 2–5 MB elég.");
     blob = file;
     contentType = "video/mp4";
   }
@@ -76,7 +76,7 @@ export async function uploadMedia(kind: "image" | "video", file: File): Promise<
   if (!target.ok) throw new Error(target.error);
   const { error: upErr } = await supabaseBrowser()
     .storage.from(MEDIA_BUCKET)
-    .uploadToSignedUrl(target.path, target.token, blob, { contentType });
+    .uploadToSignedUrl(target.path, target.token, blob, { contentType, cacheControl: "31536000" });
   if (upErr) throw new Error("A feltöltés nem sikerült: " + upErr.message);
   return target.path;
 }

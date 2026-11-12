@@ -9,6 +9,7 @@ import InstaCard from "../InstaCard";
 import type { CampContent, Teacher } from "@/lib/content-types";
 import { mediaUrl } from "@/lib/format";
 import LanguageSwitch from "../LanguageSwitch";
+import LazyVideo from "../LazyVideo";
 import { t, type Locale } from "@/lib/i18n";
 
 /* A tánctábor oldal szekciói — a tartalom az adminban szerkeszthető (Tánctábor menüpont). */
@@ -123,7 +124,7 @@ export function TaborHero({ camp, locale = "hu" }: { camp: CampContent; locale?:
         >
           <div className="relative aspect-[9/16] w-[min(72vw,300px)] overflow-hidden rounded-[2rem] bg-black/60 backdrop-blur-sm sm:w-[min(60vw,320px)] lg:w-[340px]">
             {camp.reelPath ? (
-              <video className="absolute inset-0 h-full w-full object-cover" src={mediaUrl(camp.reelPath)} autoPlay muted loop playsInline />
+              <LazyVideo className="absolute inset-0 h-full w-full object-cover" src={mediaUrl(camp.reelPath)} />
             ) : (
               <div className="absolute inset-0 grid place-items-center rounded-[2rem] border border-dashed border-white/25">
                 <span className="text-xs font-bold uppercase tracking-[0.3em] text-white/50">{copy.video}</span>
